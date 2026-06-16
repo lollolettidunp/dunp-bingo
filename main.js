@@ -1,0 +1,234 @@
+const STORAGE_PREFIX = "dunp-bingo:";
+const BONUS_INDEX = 12;
+const BONUS_TEXT = "BONUS";
+
+const board = document.querySelector("#board");
+const todayLabel = document.querySelector("#todayLabel");
+const progressLabel = document.querySelector("#progressLabel");
+const bingoBanner = document.querySelector("#bingoBanner");
+
+let state = null;
+
+start();
+
+async function start() {
+  todayLabel.textContent = formatDate(new Date());
+
+  try {
+    const squares = await loadSquares();
+    state = loadTodayState(squares);
+    renderBoard();
+    updateProgress();
+  } catch (error) {
+    board.innerHTML = `<div class="error">Impossibile caricare le caselle del bingo.</div>`;
+  }
+}
+
+async function loadSquares() {
+  const response = await fetch("bingo.json", { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error("bingo.json non trovato.");
+  }
+
+  const data = await response.json();
+
+  if (!Array.isArray(data.squares) || data.squares.length < 24) {
+    throw new Error("bingo.json deve contenere almeno 24 caselle.");
+  }
+
+  return data.squares;
+}
+
+function loadTodayState(sourceSquares) {
+  const key = getStorageKey();
+  const saved = readJson(key);
+
+  if (saved && saved.date === getDateId() && Array.isArray(saved.squares) && saved.squares.length === 25) {
+    return saved;
+  }
+
+  const squares = buildDailySquares(sourceSquares);
+  const freshState = {
+    date: getDateId(),
+    arrangementHash: hashText(squares.join("|")),
+    squares,
+    markedIndexes: [BONUS_INDEX],
+    completedLines: []
+  };
+
+  saveState(freshState);
+  return freshState;
+}
+
+function buildDailySquares(sourceSquares) {
+  const shuffled = shuffle(sourceSquares).slice(0, 24);
+  shuffled.splice(BONUS_INDEX, 0, BONUS_TEXT);
+  return shuffled;
+}
+
+function renderBoard() {
+  board.innerHTML = "";
+
+  state.squares.forEach((text, index) => {
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = "cell";
+    cell.dataset.index = String(index);
+    cell.innerHTML = `<span>${escapeHtml(text)}</span>`;
+
+    if (index === BONUS_INDEX) {
+      cell.classList.add("bonus", "marked");
+      cell.disabled = true;
+    }
+
+    if (state.markedIndexes.includes(index)) {
+      cell.classList.add("marked");
+    }
+
+    cell.addEventListener("dblclick", () => toggleCell(index));
+    board.appendChild(cell);
+  });
+}
+
+function toggleCell(index) {
+  if (index === BONUS_INDEX) {
+    return;
+  }
+
+  if (state.markedIndexes.includes(index)) {
+    state.markedIndexes = state.markedIndexes.filter((markedIndex) => markedIndex !== index);
+  } else {
+    state.markedIndexes.push(index);
+  }
+
+  saveState(state);
+  renderBoard();
+  updateProgress();
+  checkCompletedLines();
+}
+
+function checkCompletedLines() {
+  const completedLines = getCompletedLines();
+  const completedLineIds = completedLines.map((line) => line.id);
+  const newLines = completedLines.filter((line) => !state.completedLines.includes(line.id));
+
+  state.completedLines = completedLineIds;
+  saveState(state);
+
+  if (newLines.length === 0) {
+    return;
+  }
+
+  newLines.forEach((line) => animateLine(line.indexes));
+  showBingo();
+}
+
+function getCompletedLines() {
+  const lines = [
+    { id: "row-0", indexes: [0, 1, 2, 3, 4] },
+    { id: "row-1", indexes: [5, 6, 7, 8, 9] },
+    { id: "row-2", indexes: [10, 11, 12, 13, 14] },
+    { id: "row-3", indexes: [15, 16, 17, 18, 19] },
+    { id: "row-4", indexes: [20, 21, 22, 23, 24] },
+    { id: "col-0", indexes: [0, 5, 10, 15, 20] },
+    { id: "col-1", indexes: [1, 6, 11, 16, 21] },
+    { id: "col-2", indexes: [2, 7, 12, 17, 22] },
+    { id: "col-3", indexes: [3, 8, 13, 18, 23] },
+    { id: "col-4", indexes: [4, 9, 14, 19, 24] },
+    { id: "diag-0", indexes: [0, 6, 12, 18, 24] },
+    { id: "diag-1", indexes: [4, 8, 12, 16, 20] }
+  ];
+
+  return lines.filter((line) => line.indexes.every((index) => state.markedIndexes.includes(index)));
+}
+
+function animateLine(indexes) {
+  indexes.forEach((index) => {
+    const cell = board.querySelector(`[data-index="${index}"]`);
+    if (!cell) return;
+
+    cell.classList.remove("line-hit");
+    window.setTimeout(() => cell.classList.add("line-hit"), 20);
+  });
+}
+
+function showBingo() {
+  bingoBanner.classList.remove("show");
+  window.setTimeout(() => bingoBanner.classList.add("show"), 20);
+
+  if (window.confetti) {
+    window.confetti({
+      particleCount: 120,
+      spread: 80,
+      origin: { y: 0.7 }
+    });
+  }
+}
+
+function updateProgress() {
+  progressLabel.textContent = `${state.markedIndexes.length}/25`;
+}
+
+function saveState(nextState) {
+  localStorage.setItem(getStorageKey(), JSON.stringify(nextState));
+}
+
+function readJson(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
+}
+
+function shuffle(items) {
+  const copy = [...items];
+
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[randomIndex]] = [copy[randomIndex], copy[index]];
+  }
+
+  return copy;
+}
+
+function getStorageKey() {
+  return `${STORAGE_PREFIX}${getDateId()}`;
+}
+
+function getDateId() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDate(date) {
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  }).format(date);
+}
+
+function hashText(text) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+  }
+
+  return (hash >>> 0).toString(16);
+}
+
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dunp Bingo</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+    <script src="main.js" defer></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Scheda giornaliera</p>
+          <h1>Dunp Bingo</h1>
+        </div>
+        <div class="status">
+          <span id="todayLabel"></span>
+          <strong id="progressLabel">0/25</strong>
+        </div>
+      </header>
+
+      <section class="board-wrap" aria-live="polite">
+        <div id="board" class="board"></div>
+      </section>
+
+      <p class="hint">Doppio click su una casella per marcarla.</p>
+    </main>
+
+    <div id="bingoBanner" class="bingo-banner" role="status" aria-live="assertive">
+      Bingo!
+    </div>
+  </body>
+</html>
