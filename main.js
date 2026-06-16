@@ -24,10 +24,14 @@ const board = document.querySelector("#board");
 const todayLabel = document.querySelector("#todayLabel");
 const progressLabel = document.querySelector("#progressLabel");
 const bingoBanner = document.querySelector("#bingoBanner");
+const leaderboardButton = document.querySelector("#leaderboardButton");
+const leaderboardDialog = document.querySelector("#leaderboardDialog");
+const leaderboardList = document.querySelector("#leaderboardList");
 
 let state = null;
 
 start();
+leaderboardButton.addEventListener("click", openLeaderboard);
 
 async function start() {
   todayLabel.textContent = formatDate(new Date());
@@ -56,6 +60,52 @@ async function loadSquares() {
   }
 
   return data.squares;
+}
+
+async function openLeaderboard() {
+  leaderboardList.innerHTML = `<li class="leaderboard-note">Caricamento...</li>`;
+  leaderboardDialog.showModal();
+
+  try {
+    renderLeaderboard(await loadLeaderboard());
+  } catch {
+    leaderboardList.innerHTML = `<li class="leaderboard-note">Impossibile caricare la classifica.</li>`;
+  }
+}
+
+async function loadLeaderboard() {
+  const response = await fetch("leaderboard.json", { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error("leaderboard.json non trovato.");
+  }
+
+  const data = await response.json();
+
+  if (!Array.isArray(data.results)) {
+    throw new Error("leaderboard.json deve contenere results.");
+  }
+
+  return data.results
+    .filter((entry) => typeof entry.name === "string" && Number.isFinite(entry.score))
+    .sort((first, second) => second.score - first.score);
+}
+
+function renderLeaderboard(entries) {
+  if (entries.length === 0) {
+    leaderboardList.innerHTML = `<li class="leaderboard-note">Nessun risultato inserito.</li>`;
+    return;
+  }
+
+  leaderboardList.innerHTML = entries
+    .map((entry) => `
+      <li>
+        <span>${escapeHtml(entry.name)}</span>
+        <strong>${entry.score}</strong>
+        ${entry.date ? `<small>Ultima Vittoria: ${escapeHtml(entry.date)}</small>` : ""}
+      </li>
+    `)
+    .join("");
 }
 
 function loadTodayState(sourceSquares) {

@@ -24,9 +24,12 @@
           </div>
           <h1>Dunp-ingo</h1>
         </div>
-        <div class="status">
-          <span id="todayLabel"></span>
-          <strong id="progressLabel">0/25</strong>
+        <div class="hero-actions">
+          <div class="status">
+            <span id="todayLabel"></span>
+            <strong id="progressLabel">0/25</strong>
+          </div>
+          <button id="leaderboardButton" class="leaderboard-button" type="button">Classifica</button>
         </div>
       </header>
 
@@ -41,5 +44,13 @@
     <div id="bingoBanner" class="bingo-banner" role="status" aria-live="assertive">
       Bingo!
     </div>
+
+    <dialog id="leaderboardDialog" class="leaderboard-dialog">
+      <form method="dialog">
+        <button class="dialog-close" type="submit" aria-label="Chiudi">&times;</button>
+      </form>
+      <h2>Classifica</h2>
+      <ol id="leaderboardList" class="leaderboard-list"></ol>
+    </dialog>
   </body>
 </html>
