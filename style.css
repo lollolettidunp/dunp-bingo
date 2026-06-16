@@ -120,6 +120,14 @@ button {
   transform: translate(-50%, 0);
 }
 
+.footer {
+  margin: 32px 0 0;
+  color: #514a41;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 h1 {
   margin: 0;
   font-size: clamp(2.25rem, 8vw, 5.25rem);
