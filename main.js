@@ -1,6 +1,24 @@
 const STORAGE_PREFIX = "dunp-bingo:";
 const BONUS_INDEX = 12;
 const BONUS_TEXT = "BONUS";
+const FACE_FILES = [
+  "alessandro-moscetta.jpg",
+  "angelo-surano.jpg",
+  "chiara-zamponi.jpg",
+  "claudio-polito.jpg",
+  "desiree-iafrate.jpg",
+  "edoardo-andreoni.jpg",
+  "emanuele-longhi.jpg",
+  "francesca-cutini.jpg",
+  "gabriele-simonetti.jpg",
+  "giulia-bernardini.jpg",
+  "giuseppe-pugliese.jpg",
+  "laura-di-sante.jpg",
+  "lorenzo-lettieri.jpg",
+  "martina-marabitti.jpg",
+  "sonia-mariucci.jpg",
+  "tiziana-evangelisti.jpg"
+];
 
 const board = document.querySelector("#board");
 const todayLabel = document.querySelector("#todayLabel");
@@ -96,7 +114,9 @@ function toggleCell(index) {
     return;
   }
 
-  if (state.markedIndexes.includes(index)) {
+  const wasMarked = state.markedIndexes.includes(index);
+
+  if (wasMarked) {
     state.markedIndexes = state.markedIndexes.filter((markedIndex) => markedIndex !== index);
   } else {
     state.markedIndexes.push(index);
@@ -105,6 +125,11 @@ function toggleCell(index) {
   saveState(state);
   renderBoard();
   updateProgress();
+
+  if (!wasMarked) {
+    showFaceBubble(index);
+  }
+
   checkCompletedLines();
 }
 
@@ -164,6 +189,59 @@ function showBingo() {
       origin: { y: 0.7 }
     });
   }
+}
+
+function showFaceBubble(index) {
+  if (FACE_FILES.length === 0) {
+    return;
+  }
+
+  const cell = board.querySelector(`[data-index="${index}"]`);
+
+  if (!cell) {
+    return;
+  }
+
+  const bubble = document.createElement("div");
+  const image = document.createElement("img");
+
+  bubble.className = "face-bubble";
+  bubble.setAttribute("aria-hidden", "true");
+  image.src = `faces/${getRandomFaceFile()}`;
+  image.alt = "";
+
+  bubble.appendChild(image);
+  document.body.appendChild(bubble);
+
+  positionFaceBubble(bubble, cell);
+  window.setTimeout(() => bubble.remove(), 2600);
+}
+
+function positionFaceBubble(bubble, cell) {
+  const cellRect = cell.getBoundingClientRect();
+  const bubbleRect = bubble.getBoundingClientRect();
+  const margin = 12;
+  const left = clamp(
+    cellRect.left + cellRect.width / 2 - bubbleRect.width / 2,
+    margin,
+    window.innerWidth - bubbleRect.width - margin
+  );
+  const top = clamp(
+    cellRect.top - bubbleRect.height * 0.55,
+    margin,
+    window.innerHeight - bubbleRect.height - margin
+  );
+
+  bubble.style.left = `${left}px`;
+  bubble.style.top = `${top}px`;
+}
+
+function getRandomFaceFile() {
+  return FACE_FILES[Math.floor(Math.random() * FACE_FILES.length)];
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function updateProgress() {
