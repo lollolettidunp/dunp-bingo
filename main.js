@@ -54,12 +54,52 @@ async function loadSquares() {
   }
 
   const data = await response.json();
+  const squares = getAvailableSquares(data);
 
-  if (!Array.isArray(data.squares) || data.squares.length < 24) {
+  if (squares.length < 24) {
     throw new Error("bingo.json deve contenere almeno 24 caselle.");
   }
 
-  return data.squares;
+  return squares;
+}
+
+function getAvailableSquares(data, day = getTodayName()) {
+  if (!Array.isArray(data.squares)) {
+    return [];
+  }
+
+  return data.squares
+    .map(normalizeSquare)
+    .filter(Boolean)
+    .filter((square) => !isExcludedOn(square, day))
+    .map((square) => square.text);
+}
+
+function normalizeSquare(square) {
+  if (typeof square === "string" && square.trim()) {
+    return { text: square };
+  }
+
+  if (square && typeof square.text === "string" && square.text.trim()) {
+    return square;
+  }
+
+  return null;
+}
+
+function isExcludedOn(square, day) {
+  const except = Array.isArray(square.except) ? square.except : [square.except];
+  return except.some((value) => normalizeDay(value) === day);
+}
+
+function getTodayName() {
+  return ["domenica", "lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato"][new Date().getDay()];
+}
+
+function normalizeDay(value) {
+  return typeof value === "string"
+    ? value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    : "";
 }
 
 async function openLeaderboard() {
