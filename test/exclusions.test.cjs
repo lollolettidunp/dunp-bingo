@@ -22,13 +22,31 @@ const context = {
     createElement: element,
     querySelector: element
   },
+  Date: class extends Date {
+    constructor(...args) {
+      super(...(args.length ? args : ["2026-06-18T12:00:00"]));
+    }
+
+    static now() {
+      return new Date("2026-06-18T12:00:00").getTime();
+    }
+  },
   fetch: async () => ({
     ok: true,
     json: async () => ({ squares: Array.from({ length: 24 }, (_, index) => ({ text: `base ${index}` })) })
   }),
   localStorage: {
-    getItem() { return null; },
-    setItem() {}
+    store: new Map([
+      ["dunp-bingo:2026-06-15", "{}"],
+      ["dunp-bingo:2026-06-16", "{}"],
+      ["dunp-bingo:2026-06-17", "{}"],
+      ["unrelated", "{}"]
+    ]),
+    get length() { return this.store.size; },
+    key(index) { return [...this.store.keys()][index] ?? null; },
+    getItem(key) { return this.store.get(key) ?? null; },
+    removeItem(key) { this.store.delete(key); },
+    setItem(key, value) { this.store.set(key, value); }
   },
   window: {
     innerHeight: 1000,
@@ -38,6 +56,14 @@ const context = {
 };
 
 vm.runInNewContext(fs.readFileSync("main.js", "utf8"), context);
+
+context.loadTodayState(Array.from({ length: 24 }, (_, index) => `square ${index}`));
+
+assert(!context.localStorage.store.has("dunp-bingo:2026-06-15"));
+assert(!context.localStorage.store.has("dunp-bingo:2026-06-16"));
+assert(context.localStorage.store.has("dunp-bingo:2026-06-17"));
+assert(context.localStorage.store.has("dunp-bingo:2026-06-18"));
+assert(context.localStorage.store.has("unrelated"));
 
 const data = {
   squares: [

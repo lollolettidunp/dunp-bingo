@@ -149,6 +149,8 @@ function renderLeaderboard(entries) {
 }
 
 function loadTodayState(sourceSquares) {
+  cleanupOldStorage();
+
   const key = getStorageKey();
   const saved = readJson(key);
 
@@ -167,6 +169,19 @@ function loadTodayState(sourceSquares) {
 
   saveState(freshState);
   return freshState;
+}
+
+function cleanupOldStorage() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const cutoff = getDateId(yesterday);
+  const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index));
+
+  keys.forEach((key) => {
+    if (key && key.startsWith(STORAGE_PREFIX) && key.slice(STORAGE_PREFIX.length) < cutoff) {
+      localStorage.removeItem(key);
+    }
+  });
 }
 
 function buildDailySquares(sourceSquares) {
@@ -365,11 +380,10 @@ function getStorageKey() {
   return `${STORAGE_PREFIX}${getDateId()}`;
 }
 
-function getDateId() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+function getDateId(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
