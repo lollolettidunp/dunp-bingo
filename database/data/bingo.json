@@ -36,9 +36,8 @@
     { "text": "Massi è in ufficio e puntualmente piove", "except": ["lunedi","martedi","giovedi","venerdi"]},
     { "text": "Edo fa modifiche che non si vedono" },
     { "text": "Desirèe ha mal di pancia o dice che è incinta"},
-    { "text": "Giuseppe viene infortunato in ufficio"},
+    { "text": "Giuseppe viene in ufficio infortunato"},
     { "text": "Desirèe dà dello sfigato a qualcuno"},
     { "text": "Chiara si lamenta di Desirèe"}
-
   ]
 }
