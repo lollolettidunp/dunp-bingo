@@ -47,9 +47,21 @@ class Users extends Component
             'is_enabled' => $data['isEnabled'],
         ]);
 
+        $this->resetForm();
+        $this->dispatch('admin-saved', message: 'Utente salvato');
+    }
+
+    public function cancel(): void
+    {
+        $this->resetForm();
+    }
+
+    private function resetForm(): void
+    {
         $this->reset(['userId', 'email', 'name']);
         $this->startingScore = 0;
         $this->isEnabled = true;
+        $this->resetValidation();
     }
 
     public function render()

@@ -39,7 +39,7 @@ class Cells extends Component
     {
         $this->authorizeAdmin();
         $data = $this->validate([
-            'text' => ['required', 'string', 'max:1000', Rule::unique('cells')->ignore($this->cellId)],
+            'text' => ['required', 'string', 'max:255', Rule::unique('cells')->ignore($this->cellId)],
             'difficulty' => ['required', 'integer', 'between:1,3'],
             'isActive' => ['boolean'],
             'specialDate' => ['nullable', 'date'],
@@ -58,9 +58,21 @@ class Cells extends Component
         ]);
         $cell->users()->sync($data['userIds']);
 
+        $this->resetForm();
+        $this->dispatch('admin-saved', message: 'Cella salvata');
+    }
+
+    public function cancel(): void
+    {
+        $this->resetForm();
+    }
+
+    private function resetForm(): void
+    {
         $this->reset(['cellId', 'text', 'specialDate', 'excludedWeekdays', 'userIds']);
         $this->difficulty = 2;
         $this->isActive = true;
+        $this->resetValidation();
     }
 
     public function render()

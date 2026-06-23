@@ -8,6 +8,7 @@ use Livewire\Component;
 class Reviews extends Component
 {
     public string $note = '';
+    public ?int $previewBoardId = null;
 
     public function mount(): void
     {
@@ -24,6 +25,7 @@ class Reviews extends Component
             'reviewed_at' => now(),
             'review_note' => null,
         ]);
+        $this->dispatch('admin-saved', message: 'Bingo approvato');
     }
 
     public function reject(int $boardId): void
@@ -37,12 +39,24 @@ class Reviews extends Component
         ]);
         abort_unless($updated === 1, 409);
         $this->note = '';
+        $this->dispatch('admin-saved', message: 'Bingo rifiutato');
     }
 
+    public function preview(int $boardId): void
+    {
+        $this->authorizeAdmin();
+        $this->previewBoardId = $boardId;
+    }
+
+    public function closePreview(): void
+    {
+        $this->previewBoardId = null;
+    }
     public function render()
     {
         return view('livewire.admin.reviews', [
             'boards' => Board::with(['user', 'cells'])->where('status', Board::PENDING)->oldest('submitted_at')->get(),
+            'previewBoard' => $this->previewBoardId ? Board::with(['user', 'cells'])->find($this->previewBoardId) : null,
         ]);
     }
 

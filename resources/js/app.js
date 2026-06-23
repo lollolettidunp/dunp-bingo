@@ -1,3 +1,5 @@
+import { installOptimisticBoard } from './optimistic-board.js';
+
 const FACE_FILES = [
   'alessandro-moscetta.jpg','angelo-surano.jpg','chiara-zamponi.jpg','claudio-polito.jpg',
   'desiree-iafrate.jpg','edoardo-andreoni.jpg','emanuele-longhi.jpg','francesca-cutini.jpg',
@@ -5,15 +7,30 @@ const FACE_FILES = [
   'lorenzo-lettieri.jpg','martina-marabitti.jpg','sonia-mariucci.jpg','tiziana-evangelisti.jpg'
 ];
 
+installOptimisticBoard({ showFace: showRandomFaceBubble, showBingo });
+
 document.addEventListener('bingo-completed', () => {
-  window.confetti?.({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
-  document.querySelector('#bingoBanner')?.classList.add('show');
+  if (Date.now() - (window.__optimisticBingoAt || 0) < 1500) return;
+  showBingo();
 });
 
 document.addEventListener('cell-marked', (event) => {
-  const file = FACE_FILES[Math.floor(Math.random() * FACE_FILES.length)];
-  showFaceBubble(event.detail.position, `/faces/${file}`);
+  if (Date.now() - (window.__optimisticCellMarkedAt || 0) < 1500) return;
+  showRandomFaceBubble(event.detail.position);
 });
+
+function showBingo() {
+  window.confetti?.({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
+  const banner = document.querySelector('#bingoBanner');
+  if (!banner) return;
+  banner.classList.remove('show');
+  window.setTimeout(() => banner.classList.add('show'), 20);
+}
+
+function showRandomFaceBubble(position) {
+  const file = FACE_FILES[Math.floor(Math.random() * FACE_FILES.length)];
+  showFaceBubble(position, `/faces/${file}`);
+}
 
 function showFaceBubble(position, src) {
   const cell = document.querySelector(`[data-position="${position}"]`);

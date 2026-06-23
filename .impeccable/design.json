@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-23T00:00:00Z",
+  "title": "Design System: Dunp-ingo",
+  "extensions": {
+    "colorMeta": {
+      "sky": { "role": "primary", "displayName": "Sticker Sky", "canonical": "#7dd3fc", "tonalRamp": ["#0c2b3a", "#114457", "#1a6480", "#2a8aab", "#4fb1d4", "#7dd3fc", "#a8e3fd", "#d6f3fe"] },
+      "lime": { "role": "secondary", "displayName": "Marker Lime", "canonical": "#d9f99d", "tonalRamp": ["#2b3a13", "#41591c", "#5d7d28", "#7da437", "#a6cf5b", "#d9f99d", "#e8fcc2", "#f4fee0"] },
+      "marigold": { "role": "secondary", "displayName": "Bonus Marigold", "canonical": "#ffd166", "tonalRamp": ["#3a2a07", "#5a410c", "#80591a", "#ab7a2a", "#d4a23f", "#ffd166", "#ffe19c", "#fff0d1"] },
+      "hot-pink": { "role": "secondary", "displayName": "BINGO Hot Pink", "canonical": "#ff5c8a", "tonalRamp": ["#3a0c1c", "#571129", "#801a3d", "#ab2a55", "#d44070", "#ff5c8a", "#ff93b1", "#ffc9d8"] },
+      "mint-check": { "role": "tertiary", "displayName": "Mint Check", "canonical": "#34d399", "tonalRamp": ["#06271b", "#0a4030", "#136047", "#1f8463", "#2bab80", "#34d399", "#7fe6c0", "#c2f3e0"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#1d1d1f", "tonalRamp": ["#1d1d1f", "#34343a", "#4d4d54", "#6f6f78", "#9a9aa2", "#c4c4ca", "#e2e2e6", "#f3f3f5"] },
+      "surface": { "role": "neutral", "displayName": "Sticker Surface", "canonical": "#fffdf8", "tonalRamp": ["#2b2a25", "#45433a", "#605d50", "#827e6d", "#aba791", "#d4d0bd", "#f2efe3", "#fffdf8"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero page title only ('Dunp-ingo'). Inter 800, tight leading." },
+      "title": { "displayName": "Title", "purpose": "Status figures and panel headings. Inter 900." },
+      "body": { "displayName": "Body", "purpose": "Cell labels, hints, list buttons, forms. Inter 800 — no light weight exists." },
+      "label": { "displayName": "Label", "purpose": "The single hero eyebrow and status captions. Uppercase, 0.78rem." }
+    },
+    "shadows": [
+      { "name": "button-lift", "value": "4px 4px 0 #1d1d1f", "purpose": "Nav links and primary buttons — small flick-able objects." },
+      { "name": "panel-lift", "value": "8px 8px 0 #1d1d1f", "purpose": "Panels, status block, board wrapper, modal — hero surfaces lifted high." },
+      { "name": "compact-lift", "value": "5px 5px 0 #1d1d1f", "purpose": "BINGO banner, face bubbles, and mobile board wrapper." },
+      { "name": "cell-hover", "value": "0 6px 0 rgba(29,29,31,.2)", "purpose": "The one soft, straight-down shadow — a cell lifting on hover ('about to peel it off')." }
+    ],
+    "motion": [
+      { "name": "state-ease", "value": "transform 150ms ease, background 150ms ease, box-shadow 150ms ease", "purpose": "Cell hover/press state changes." },
+      { "name": "bubble-pop", "value": "cubic-bezier(.2,.9,.2,1)", "purpose": "Face-bubble pop-out easing — fast overshoot then settle." },
+      { "name": "banner-pop", "value": "1500ms ease", "purpose": "BINGO banner entrance — pops in, holds, pops out." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "720px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Nav links and main actions — a sky-blue sticker that lifts off the page.",
+      "html": "<button class=\"ds-btn-primary\">Scheda</button>",
+      "css": ".ds-btn-primary { border: 2px solid #1d1d1f; border-radius: 8px; background: #7dd3fc; color: #1d1d1f; font-weight: 900; padding: 9px 13px; box-shadow: 4px 4px 0 #1d1d1f; cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease; } .ds-btn-primary:hover { transform: translate(1px, 1px); box-shadow: 3px 3px 0 #1d1d1f; } .ds-btn-primary:active { transform: translate(4px, 4px); box-shadow: 0 0 0 #1d1d1f; } .ds-btn-primary:focus-visible { outline: 3px solid #1d1d1f; outline-offset: 2px; }"
+    },
+    {
+      "name": "List Button",
+      "kind": "button",
+      "refersTo": "button-list",
+      "description": "Full-width menu row that sits flush inside a panel — no shadow, no lift.",
+      "html": "<button class=\"ds-btn-list\">Mario Rossi</button>",
+      "css": ".ds-btn-list { display: block; width: 100%; text-align: left; border: 2px solid #1d1d1f; border-radius: 8px; background: #fffdf8; color: #1d1d1f; font-weight: 900; padding: 9px 13px; cursor: pointer; transition: background 120ms ease; } .ds-btn-list:hover { background: #f8f2e9; } .ds-btn-list:focus-visible { outline: 3px solid #1d1d1f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Bingo Cell",
+      "kind": "custom",
+      "refersTo": "cell",
+      "description": "The core interactive square. Hover lifts it; marked turns it lime with a mint check stamp.",
+      "html": "<button class=\"ds-cell\" data-position=\"7\"><span>Qualcuno arriva in ritardo</span></button>",
+      "css": ".ds-cell { position: relative; display: grid; place-items: center; min-height: 116px; padding: 12px; border: 2px solid #1d1d1f; border-radius: 8px; background: #fffdf8; color: #25211b; text-align: center; cursor: pointer; user-select: none; transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease; } .ds-cell span { font-weight: 800; font-size: clamp(.76rem, 1.65vw, 1rem); line-height: 1.18; } .ds-cell:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(29,29,31,.2); } .ds-cell:focus-visible { outline: 3px solid #1d1d1f; outline-offset: 2px; }"
+    },
+    {
+      "name": "Bingo Cell — Marked",
+      "kind": "custom",
+      "refersTo": "cell-marked",
+      "description": "A marked square: lime fill with a circular mint check badge stamped top-right.",
+      "html": "<button class=\"ds-cell ds-cell-marked\" data-position=\"7\"><span>Qualcuno arriva in ritardo</span></button>",
+      "css": ".ds-cell-marked { background: #d9f99d; } .ds-cell-marked::after { content: '\\2713'; position: absolute; top: 7px; right: 9px; display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid #1d1d1f; border-radius: 50%; background: #34d399; color: #1d1d1f; font-weight: 900; }"
+    },
+    {
+      "name": "Bingo Cell — Bonus",
+      "kind": "custom",
+      "refersTo": "cell-bonus",
+      "description": "A bonus / free square: marigold fill with a large check above the label.",
+      "html": "<div class=\"ds-cell ds-cell-bonus\"><span>Casella bonus</span></div>",
+      "css": ".ds-cell-bonus { background: #ffd166; } .ds-cell-bonus::before { content: '\\2713'; display: block; margin-bottom: 5px; font-size: 1.6rem; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "The base container — a translucent off-white sticker lifted high off the gradient.",
+      "html": "<section class=\"ds-panel\"><h2 class=\"ds-panel-title\">Classifica</h2></section>",
+      "css": ".ds-panel { border: 2px solid #1d1d1f; border-radius: 8px; background: rgba(255,253,248,.78); box-shadow: 8px 8px 0 #1d1d1f; padding: 14px; } .ds-panel-title { margin: 0; font-weight: 900; font-size: 1.55rem; color: #1d1d1f; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Inputs are stickers too — same outline vocabulary, ink focus, no colored glow.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Nuova casella\" />",
+      "css": ".ds-input { width: 100%; border: 2px solid #1d1d1f; border-radius: 8px; background: #fffdf8; color: #1d1d1f; font-weight: 700; padding: 8px; } .ds-input::placeholder { color: #6f6a62; } .ds-input:focus-visible { outline: none; border-width: 3px; }"
+    },
+    {
+      "name": "BINGO Banner",
+      "kind": "custom",
+      "refersTo": "hot-pink",
+      "description": "The win klaxon — fixed pink banner that pops in, tilted, with a confetti burst.",
+      "html": "<div class=\"ds-banner\">BINGO!</div>",
+      "css": ".ds-banner { display: inline-block; border: 2px solid #1d1d1f; border-radius: 8px; background: #ff5c8a; color: #fff; font-size: 1.65rem; font-weight: 900; padding: 12px 24px; box-shadow: 5px 5px 0 #1d1d1f; transform: rotate(-3deg); } @media (prefers-reduced-motion: reduce) { .ds-banner { transform: none; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Sticker-Sheet Toy",
+    "overview": "Dunp-ingo looks like a sheet of glossy stickers you want to peel off and press onto your laptop. Every surface shares one vocabulary: a thick 2px black outline, a gently rounded 8px corner, and a hard, blur-free drop shadow offset down and to the right. Nothing recedes softly; everything sits up off the page like a die-cut object. The palette is candy — sky blue, lime, marigold, hot pink — over a warm-to-mint-to-lilac gradient with an amber glow, the way light catches vinyl. This is a game for colleagues, not an analytics tool, and it refuses the SaaS-dashboard register entirely: no hairline borders, no soft ambient shadows, no muted-gray text, no hero-metric template. Refinement means tighter alignment and honest contrast — never sanding off the joy. Type is heavy single-family Inter at 800–900, so even body copy has presence, and marking a square or hitting BINGO is celebrated loudly with confetti, a rotating pink banner, and a colleague's face popping out of the cell. The whole thing is phone-first.",
+    "keyCharacteristics": [
+      "Thick 2px ink outlines on every interactive surface — no hairlines.",
+      "Hard offset shadows with zero blur (Npx Npx 0 #1d1d1f) — the signature material.",
+      "One 8px corner radius across the system; full stadium (999px) for status pills/badges; circles only for check stamps and avatars.",
+      "Candy color used as function, not decoration: lime = marked, marigold = bonus, pink = BINGO.",
+      "Heavy single-family type (Inter 800–900) on a warm gradient backdrop.",
+      "Phone-first: every surface tested at ≤560px before desktop."
+    ],
+    "rules": [
+      { "name": "The One-Ink Rule", "body": "There is exactly one structural color: #1d1d1f. Every border, every shadow, and all primary text use it. Never introduce a second dark — no charcoal shadows, no gray borders. (Oxblood #b42318 is allowed only for error states.)", "section": "colors" },
+      { "name": "The Color-Means-Something Rule", "body": "Saturated fills are functional, not decorative. Lime means marked, marigold means bonus, pink means BINGO. Never use a candy color just to add color to a neutral surface.", "section": "colors" },
+      { "name": "The Weight-Is-Hierarchy Rule", "body": "Hierarchy comes from weight and size within Inter, never from a second font. If you need contrast, go heavier (900) or bigger, not different.", "section": "typography" },
+      { "name": "The One-Eyebrow Rule", "body": "The uppercase tracked label appears exactly once — the hero kicker. Never stack a small all-caps eyebrow above every panel.", "section": "typography" },
+      { "name": "The Zero-Blur Rule", "body": "Shadows are solid ink offsets, never blurred. The second-to-last value is always 0. A blur radius on a structural surface breaks the sticker metaphor and reads as a dated 2014 app.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do outline every interactive surface with a 2px #1d1d1f border and an 8px radius.",
+      "Do use hard, zero-blur offset shadows (4px 4px 0 for buttons, 8px 8px 0 for panels, 5px 5px 0 for floating/celebration).",
+      "Do keep candy color functional — lime = marked, marigold = bonus, pink = BINGO.",
+      "Do keep all text on the ink end of the ramp (#1d1d1f) on candy backgrounds, and reserve Muted Ink (#6f6a62) for true secondary metadata only.",
+      "Do design and test phone-first: board, leaderboard, and marking must be flawless at ≤560px before desktop.",
+      "Do add a prefers-reduced-motion: reduce fallback for the BINGO banner, face bubbles, and confetti."
+    ],
+    "donts": [
+      "Don't use blurred or soft ambient shadows on any structural surface.",
+      "Don't introduce a second structural dark — one ink (#1d1d1f) only (oxblood #b42318 for errors only).",
+      "Don't drift toward the SaaS-dashboard register: no hairline borders, no muted-gray body text on tint, no hero-metric template.",
+      "Don't pair Inter with a second typeface. Get contrast from weight and size.",
+      "Don't stack a small uppercase tracked eyebrow above every section.",
+      "Don't nest a lifted card inside another lifted card.",
+      "Don't refine the fun away — tighten alignment and contrast, never trade the playful identity for 'more professional'."
+    ]
+  }
+}

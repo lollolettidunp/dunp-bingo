@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\InvalidStateException;
 
 class GoogleAuthController extends Controller
 {
@@ -16,7 +17,11 @@ class GoogleAuthController extends Controller
 
     public function callback()
     {
-        $google = Socialite::driver('google')->user();
+        try {
+            $google = Socialite::driver('google')->user();
+        } catch (InvalidStateException) {
+            return redirect()->route('login')->with('login_error', 'Sessione Google scaduta: riprova il login.');
+        }
         $email = strtolower((string) $google->getEmail());
         abort_unless(filter_var($email, FILTER_VALIDATE_EMAIL), 403);
 

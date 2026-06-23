@@ -21,6 +21,8 @@ class LeaderboardTest extends TestCase
 
         Livewire::actingAs($user)->test(Leaderboard::class)
             ->assertSee('Winner')
+            ->assertSee('Istruzioni')
+            ->assertSee('Ogni bingo approvato vale 1 punto.')
             ->assertSee('4');
     }
 }

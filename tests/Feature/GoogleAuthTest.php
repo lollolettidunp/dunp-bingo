@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\InvalidStateException;
+use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Tests\TestCase;
 
@@ -58,16 +60,42 @@ class GoogleAuthTest extends TestCase
         $this->get('/login/google/callback')->assertForbidden();
     }
 
-    private function googleUser(string $id, string $email, string $name): void
+    public function test_invalid_google_state_restarts_login_without_500(): void
     {
         $provider = Mockery::mock();
-        $provider->shouldReceive('user')->andReturn(new class($id, $email, $name)
+        $provider->shouldReceive('user')->andThrow(new InvalidStateException);
+        Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+
+        $this->get('/login/google/callback')
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('login_error');
+
+        $this->assertGuest();
+    }
+    public function test_google_avatar_url_column_accepts_google_long_urls(): void
+    {
+        $column = collect(Schema::getColumns('users'))->firstWhere('name', 'avatar_url');
+
+        $this->assertSame('text', $column['type_name']);
+    }
+    public function test_workspace_login_accepts_long_google_avatar_urls(): void
+    {
+        $this->googleUser('5', 'avatar@azienda.it', 'Avatar', 'https://lh3.googleusercontent.com/'.str_repeat('x', 600));
+
+        $this->get('/login/google/callback')->assertRedirect(route('board'));
+
+        $this->assertDatabaseHas('users', ['email' => 'avatar@azienda.it']);
+    }
+    private function googleUser(string $id, string $email, string $name, string $avatar = 'https://example.com/avatar.jpg'): void
+    {
+        $provider = Mockery::mock();
+        $provider->shouldReceive('user')->andReturn(new class($id, $email, $name, $avatar)
         {
-            public function __construct(private string $id, private string $email, private string $name) {}
+            public function __construct(private string $id, private string $email, private string $name, private string $avatar) {}
             public function getId(): string { return $this->id; }
             public function getEmail(): string { return $this->email; }
             public function getName(): string { return $this->name; }
-            public function getAvatar(): string { return 'https://example.com/avatar.jpg'; }
+            public function getAvatar(): string { return $this->avatar; }
         });
         Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
     }

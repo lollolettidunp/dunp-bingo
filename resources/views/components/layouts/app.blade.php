@@ -12,15 +12,14 @@
 </head>
 <body>
     <main class="page">
-        <header class="hero">
+        <header class="hero">  
             <div>
-                <p class="eyebrow">Bingo aziendale</p>
-                <h1>Dunp-ingo</h1>
+                <img src="{{ asset('logo.png') }}" width="200px" alt="Dunp-ingo" class="logo" />
             </div>
             <nav class="nav">
-                <a href="{{ route('board') }}">Scheda</a>
-                <a href="{{ route('colleagues') }}">Colleghi</a>
-                <a href="{{ route('leaderboard') }}">Classifica</a>
+                <a href="{{ route('board') }}" title="La tua scheda bingo di oggi">Scheda</a>
+                <a href="{{ route('colleagues') }}" title="Guarda le schede dei colleghi">Colleghi</a>
+                <a href="{{ route('leaderboard') }}" title="Vedi i punti approvati">Classifica</a>
                 @if (strtolower(auth()->user()?->email ?? '') === strtolower(config('services.google.admin_email')))
                     <a href="{{ route('admin') }}">Admin</a>
                 @endif

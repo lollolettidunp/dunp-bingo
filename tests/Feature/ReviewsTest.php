@@ -30,4 +30,19 @@ class ReviewsTest extends TestCase
         Livewire::actingAs($admin)->test(Reviews::class)->set('note', 'no')->call('reject', $rejected->id);
         $this->assertSame(Board::REJECTED, $rejected->fresh()->status);
     }
+    public function test_admin_can_preview_pending_board_in_a_popup(): void
+    {
+        config(['services.google.admin_email' => 'admin@azienda.it']);
+        $admin = User::factory()->create(['email' => 'admin@azienda.it']);
+        $board = Board::factory()->for(User::factory()->create(['name' => 'Player']))->create(['status' => Board::PENDING]);
+        BoardCell::factory()->for($board)->create(['position' => 0, 'text' => 'Preview cell', 'marked_at' => now()]);
+
+        Livewire::actingAs($admin)->test(Reviews::class)
+            ->call('preview', $board->id)
+            ->assertSet('previewBoardId', $board->id)
+            ->assertSee('Scheda di Player')
+            ->assertSee('Preview cell')
+            ->call('closePreview')
+            ->assertSet('previewBoardId', null);
+    }
 }

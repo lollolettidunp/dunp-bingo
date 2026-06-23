@@ -23,6 +23,8 @@ class ColleagueBoardsTest extends TestCase
 
         Livewire::actingAs($viewer)->test(ColleagueBoards::class)
             ->assertSee('Today')
+            ->assertSee('Istruzioni')
+            ->assertSee('Apri un collega per spiare la sua scheda.')
             ->assertSee('Marked')
             ->assertDontSee('Old')
             ->assertDontSee('wire:click="toggle');

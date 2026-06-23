@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('cells', function (Blueprint $table) {
             $table->id();
-            $table->text('text')->unique();
+            $table->string('text', 255)->unique();
             $table->unsignedTinyInteger('difficulty')->default(2);
             $table->boolean('is_active')->default(true);
             $table->date('special_date')->nullable()->index();

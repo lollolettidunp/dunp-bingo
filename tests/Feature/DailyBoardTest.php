@@ -31,6 +31,24 @@ class DailyBoardTest extends TestCase
         $test->call('toggle', 5)->assertStatus(409);
     }
 
+    public function test_board_statuses_have_user_facing_labels(): void
+    {
+        $this->assertSame('In gioco', (new Board(['status' => Board::PLAYING]))->statusLabel());
+        $this->assertSame('In Revisione', (new Board(['status' => Board::PENDING]))->statusLabel());
+        $this->assertSame('Completata!', (new Board(['status' => Board::APPROVED]))->statusLabel());
+    }
+    public function test_board_shows_status_labels_and_uses_single_click_toggle(): void
+    {
+        $user = User::factory()->create();
+        Cell::factory()->count(30)->create();
+
+        Livewire::actingAs($user)->test(DailyBoard::class)
+            ->assertSee('In gioco')
+            ->assertSee('Istruzioni')
+            ->assertSee('Tocca una casella quando succede davvero.')
+            ->assertSee('wire:click="toggle(0)', false)
+            ->assertDontSee('wire:dblclick', false);
+    }
     public function test_bonus_cannot_be_toggled_and_generation_error_is_shown(): void
     {
         $user = User::factory()->create();
