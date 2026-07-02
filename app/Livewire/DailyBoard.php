@@ -4,8 +4,10 @@ namespace App\Livewire;
 
 use App\Actions\CreateDailyBoard;
 use App\Models\Board;
+use App\Models\Cell;
 use Carbon\CarbonImmutable;
 use DomainException;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class DailyBoard extends Component
@@ -44,6 +46,25 @@ class DailyBoard extends Component
         }
     }
 
+    public function applySpecialCell(int $cellId, int $position): void
+    {
+        abort_unless($this->board?->user_id === auth()->id(), 403);
+        abort_unless(in_array($this->board->status, [Board::PLAYING, Board::REJECTED], true), 409);
+        abort_if($position === Board::BONUS_POSITION, 422);
+
+        $special = $this->specialCells()->firstWhere('id', $cellId);
+        abort_unless($special, 404);
+
+        $this->board->cells()->where('position', $position)->firstOrFail()->update([
+            'cell_id' => $special->id,
+            'text' => $special->text,
+            'difficulty' => $special->difficulty,
+            'marked_at' => null,
+        ]);
+        $this->board->refresh()->load('cells');
+        $this->dispatch('special-cell-applied', position: $position);
+    }
+
     public function submit(): void
     {
         abort_unless($this->board?->user_id === auth()->id(), 403);
@@ -57,6 +78,43 @@ class DailyBoard extends Component
     {
         $this->board?->load('cells');
 
-        return view('livewire.daily-board');
+        return view('livewire.daily-board', [
+            'specialAppliedCellIds' => $this->specialAppliedCellIds(),
+            'specialCells' => $this->specialCells(),
+        ]);
+    }
+
+    private function specialAppliedCellIds(): array
+    {
+        if (! $this->board) {
+            return [];
+        }
+
+        $used = $this->board->cells()->whereNotNull('cell_id')->pluck('cell_id')->all();
+
+        return Cell::query()
+            ->whereIn('id', $used)
+            ->whereDate('special_date', $this->board->played_on)
+            ->pluck('id')
+            ->all();
+    }
+    private function specialCells(): Collection
+    {
+        if (! $this->board) {
+            return collect();
+        }
+
+        $used = $this->board->cells()->whereNotNull('cell_id')->pluck('cell_id')->all();
+
+        return Cell::query()
+            ->where('is_active', true)
+            ->whereDate('special_date', today(config('app.timezone')))
+            ->whereNotIn('id', $used)
+            ->where(fn ($query) => $query
+                ->whereDoesntHave('users')
+                ->orWhereHas('users', fn ($users) => $users->where('users.id', auth()->id())))
+            ->orderBy('difficulty')
+            ->orderBy('text')
+            ->get();
     }
 }

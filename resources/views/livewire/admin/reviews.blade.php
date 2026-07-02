@@ -1,4 +1,4 @@
-<section class="panel">
+<section wire:poll.5s class="panel">
     <div class="panel-head">
         <h2>Revisioni</h2>
         <span class="spacer"></span>

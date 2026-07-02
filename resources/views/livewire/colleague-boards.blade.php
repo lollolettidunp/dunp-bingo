@@ -6,7 +6,7 @@
     };
 @endphp
 
-<section wire:poll.15s class="grid-page">
+<section wire:poll.5s class="grid-page">
     <aside class="panel">
         <div class="panel-head">
             <h2>Colleghi</h2>

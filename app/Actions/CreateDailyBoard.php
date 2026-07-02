@@ -26,17 +26,12 @@ class CreateDailyBoard
             $eligible = Cell::query()
                 ->where('is_active', true)
                 ->whereNotIn('id', $excludedIds)
-                ->where(fn ($query) => $query->whereNull('special_date')->orWhereDate('special_date', $date))
+                ->whereNull('special_date')
                 ->get()
                 ->reject(fn (Cell $cell) => in_array($weekday, $cell->excluded_weekdays ?? [], true));
+            throw_if($eligible->count() < 24, DomainException::class, 'Servono almeno 24 celle eleggibili.');
 
-            $special = $eligible->whereNotNull('special_date')->values();
-            $ordinary = $eligible->whereNull('special_date')->values();
-
-            throw_if($special->count() > 24, DomainException::class, 'Troppe celle speciali per questa data.');
-            throw_if($ordinary->count() + $special->count() < 24, DomainException::class, 'Servono almeno 24 celle eleggibili.');
-
-            $cells = $this->bestCells($special, $ordinary);
+            $cells = $this->bestCells($eligible);
             $board = Board::create(['user_id' => $user->id, 'played_on' => $date->toDateString(), 'status' => Board::PLAYING]);
             foreach ($cells as $position => $cell) {
                 $board->cells()->create($cell ? [
@@ -56,14 +51,14 @@ class CreateDailyBoard
         });
     }
 
-    private function bestCells(Collection $special, Collection $ordinary): Collection
+    private function bestCells(Collection $ordinary): Collection
     {
         $best = null;
         $bestSpread = PHP_INT_MAX;
 
         // ponytail: 100 tentativi bastano per 24 celle; usare un solver solo se lo sbilanciamento diventa misurabile.
         for ($i = 0; $i < 100; $i++) {
-            $picked = $ordinary->shuffle()->take(24 - $special->count())->merge($special)->shuffle()->values();
+            $picked = $ordinary->shuffle()->take(24)->values();
             $picked->splice(12, 0, [null]);
             $spread = $this->spread($picked);
             if ($spread < $bestSpread) {

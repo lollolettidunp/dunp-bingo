@@ -6,6 +6,7 @@
         <section class="stack">
             <livewire:admin.reviews />
             <livewire:admin.users />
+            <livewire:admin.special-cells />
             <livewire:admin.cells />
         </section>
 

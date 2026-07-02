@@ -5,7 +5,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "test:js": "node tests/js/optimistic-board.test.mjs"
+        "test:js": "node tests/js/optimistic-board.test.mjs && node tests/js/special-stickers.test.mjs && node tests/js/missed-notifications.test.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

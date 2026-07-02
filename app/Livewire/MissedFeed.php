@@ -13,7 +13,7 @@ class MissedFeed extends Component
         $tz = config('app.timezone');
         $userId = auth()->id();
 
-        // Caselle che ho già segnato oggi: quelle non le ho "perse".
+        // Caselle che ho gia' segnato oggi: quelle non le ho "perse".
         $myMarked = BoardCell::query()
             ->whereNotNull('marked_at')
             ->whereNotNull('cell_id')

@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Admin;
 
+use App\Actions\ReplaceInvalidBoardCells;
 use App\Models\Cell;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -13,7 +15,6 @@ class Cells extends Component
     public string $text = '';
     public int $difficulty = 2;
     public bool $isActive = true;
-    public ?string $specialDate = null;
     public array $excludedWeekdays = [];
     public array $userIds = [];
 
@@ -25,24 +26,22 @@ class Cells extends Component
     public function edit(int $id): void
     {
         $this->authorizeAdmin();
-        $cell = Cell::with('users')->findOrFail($id);
+        $cell = Cell::with('users')->whereNull('special_date')->findOrFail($id);
         $this->cellId = $cell->id;
         $this->text = $cell->text;
         $this->difficulty = $cell->difficulty;
         $this->isActive = $cell->is_active;
-        $this->specialDate = $cell->special_date?->toDateString();
         $this->excludedWeekdays = $cell->excluded_weekdays ?? [];
         $this->userIds = $cell->users->pluck('id')->all();
     }
 
-    public function save(): void
+    public function save(ReplaceInvalidBoardCells $replaceInvalidBoardCells): void
     {
         $this->authorizeAdmin();
         $data = $this->validate([
             'text' => ['required', 'string', 'max:255', Rule::unique('cells')->ignore($this->cellId)],
             'difficulty' => ['required', 'integer', 'between:1,3'],
             'isActive' => ['boolean'],
-            'specialDate' => ['nullable', 'date'],
             'excludedWeekdays' => ['array'],
             'excludedWeekdays.*' => [Rule::in(['lunedi','martedi','mercoledi','giovedi','venerdi','sabato','domenica'])],
             'userIds' => ['array'],
@@ -53,10 +52,11 @@ class Cells extends Component
             'text' => $data['text'],
             'difficulty' => $data['difficulty'],
             'is_active' => $data['isActive'],
-            'special_date' => $data['specialDate'],
+            'special_date' => null,
             'excluded_weekdays' => $data['excludedWeekdays'],
         ]);
         $cell->users()->sync($data['userIds']);
+        $replaceInvalidBoardCells($cell->fresh(), CarbonImmutable::today(config('app.timezone')));
 
         $this->resetForm();
         $this->dispatch('admin-saved', message: 'Cella salvata');
@@ -69,7 +69,7 @@ class Cells extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['cellId', 'text', 'specialDate', 'excludedWeekdays', 'userIds']);
+        $this->reset(['cellId', 'text', 'excludedWeekdays', 'userIds']);
         $this->difficulty = 2;
         $this->isActive = true;
         $this->resetValidation();
@@ -78,7 +78,7 @@ class Cells extends Component
     public function render()
     {
         return view('livewire.admin.cells', [
-            'cells' => Cell::with('users')->latest()->get(),
+            'cells' => Cell::with('users')->whereNull('special_date')->latest()->get(),
             'users' => User::orderBy('name')->get(),
             'weekdays' => ['lunedi','martedi','mercoledi','giovedi','venerdi','sabato','domenica'],
         ]);

@@ -7,6 +7,7 @@ use App\Models\Board;
 use App\Models\Cell;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -59,5 +60,50 @@ class DailyBoardTest extends TestCase
         Cell::first()->update(['is_active' => false]);
         $other = User::factory()->create();
         Livewire::actingAs($other)->test(DailyBoard::class)->assertSee('Servono almeno 24 celle');
+    }
+    public function test_user_applies_one_daily_sticker_to_replace_a_board_cell(): void
+    {
+        Carbon::setTestNow('2026-06-23 10:00:00');
+        $user = User::factory()->create();
+        Cell::factory()->count(24)->create();
+        $sticker = Cell::factory()->create([
+            'text' => 'Sticker one-time',
+            'difficulty' => 1,
+            'special_date' => '2026-06-23',
+        ]);
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)
+            ->assertSee('Sticker one-time');
+
+        $board = Board::first();
+        $target = $board->cells()->where('position', 0)->first();
+        $target->update(['marked_at' => now()]);
+
+        $test->call('applySpecialCell', $sticker->id, 0)
+            ->assertViewHas('specialCells', fn ($cells) => $cells->doesntContain('id', $sticker->id))
+            ->assertSee('special-applied', false);
+
+        $target->refresh();
+        $this->assertSame($sticker->id, $target->cell_id);
+        $this->assertSame('Sticker one-time', $target->text);
+        $this->assertSame(1, $target->difficulty);
+        $this->assertNull($target->marked_at);
+
+        $test->call('toggle', 0)
+            ->assertSee('special-completed', false);
+    }
+    public function test_daily_sticker_help_replaces_count_badge(): void
+    {
+        Carbon::setTestNow('2026-06-23 10:00:00');
+        $user = User::factory()->create();
+        Cell::factory()->count(24)->create();
+        Cell::factory()->create(['text' => 'Sticker one-time', 'special_date' => '2026-06-23']);
+
+        Livewire::actingAs($user)->test(DailyBoard::class)
+            ->assertSee('Come funzionano gli adesivi')
+            ->assertSee('special-help__button', false)
+            ->assertSee('specialHelpOpen', false)
+            ->assertDontSee('<details class="special-help"', false)
+            ->assertDontSee('special-trigger__badge', false);
     }
 }

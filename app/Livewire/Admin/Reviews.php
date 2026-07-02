@@ -52,6 +52,7 @@ class Reviews extends Component
     {
         $this->previewBoardId = null;
     }
+
     public function render()
     {
         return view('livewire.admin.reviews', [

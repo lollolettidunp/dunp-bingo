@@ -18,7 +18,7 @@ class Board extends Model
     public const APPROVED = 'approved';
     public const REJECTED = 'rejected';
 
-    protected $fillable = ['user_id', 'played_on', 'status', 'submitted_at', 'reviewed_at', 'review_note'];
+    protected $fillable = ['user_id', 'played_on', 'status', 'submitted_at', 'reviewed_at', 'review_note', 'notice'];
 
     protected function casts(): array
     {

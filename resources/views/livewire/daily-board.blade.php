@@ -1,4 +1,4 @@
-<section wire:poll.30s>
+<section wire:poll.5s x-data="{ specialCell: null, specialHelpOpen: false }" x-on:keydown.escape.window="specialHelpOpen = false">
     @if ($generationError)
         <div class="board-empty">
             <span class="board-empty__emoji" aria-hidden="true">🎲</span>
@@ -66,6 +66,15 @@
             </div>
         @endif
 
+        @if ($board->notice)
+            <div class="board-note" role="status">
+                <div class="board-note__body">
+                    <strong>Scheda aggiornata</strong>
+                    <p>{{ $board->notice }}</p>
+                </div>
+            </div>
+        @endif
+
         @unless ($locked)
             <div class="board-progress" role="group" aria-label="Avanzamento">
                 <div class="board-progress__track">
@@ -78,19 +87,53 @@
             </div>
         @endunless
 
-        <div class="board-wrap {{ $locked ? 'is-locked' : '' }}">
-            <div class="board {{ $locked ? 'readonly' : '' }}">
-                @foreach ($board->cells as $cell)
-                    <button type="button"
-                        class="cell {{ $cell->marked_at ? 'marked' : '' }} {{ $cell->position === 12 ? 'bonus' : '' }} {{ in_array($cell->position, $winning, true) ? 'win' : '' }}"
-                        data-position="{{ $cell->position }}"
-                        title="{{ $cell->position === 12 ? 'Bonus gratis' : ($locked ? 'Scheda bloccata durante la revisione' : ($cell->marked_at ? 'Tocca per togliere il segno' : 'Tocca per segnare questa casella')) }}"
-                        wire:click="toggle({{ $cell->position }})"
-                        @disabled($cell->position === 12 || $locked)>
-                        <span>{{ $cell->text }}</span>
-                    </button>
-                @endforeach
+        <div class="board-play-area {{ $specialCells->isNotEmpty() && ! $locked ? 'has-specials' : '' }}">
+            <div class="board-wrap {{ $locked ? 'is-locked' : '' }}">
+                <div class="board {{ $locked ? 'readonly' : '' }}" x-bind:class="{ 'is-receiving-sticker': specialCell }">
+                    @foreach ($board->cells as $cell)
+                        <button type="button"
+                            class="cell {{ $cell->marked_at ? 'marked' : '' }} {{ $cell->position === 12 ? 'bonus' : '' }} {{ in_array($cell->position, $winning, true) ? 'win' : '' }} {{ in_array($cell->cell_id, $specialAppliedCellIds, true) ? 'special-applied' : '' }} {{ $cell->marked_at && in_array($cell->cell_id, $specialAppliedCellIds, true) ? 'special-completed' : '' }}"
+                            data-position="{{ $cell->position }}"
+                            title="{{ $cell->position === 12 ? 'Bonus gratis' : ($locked ? 'Scheda bloccata durante la revisione' : ($cell->marked_at ? 'Tocca per togliere il segno' : 'Tocca per segnare questa casella')) }}"
+                            x-on:dragover.prevent
+                            x-on:drop.prevent="$wire.applySpecialCell(Number($event.dataTransfer.getData('text/plain')), {{ $cell->position }})"
+                            x-on:click="if (specialCell) { $wire.applySpecialCell(specialCell, {{ $cell->position }}); specialCell = null; $event.preventDefault(); $event.stopImmediatePropagation(); }"
+                            wire:click="toggle({{ $cell->position }})"
+                            @disabled($cell->position === 12 || $locked)>
+                            <span>{{ $cell->text }}</span>
+                        </button>
+                    @endforeach
+                </div>
             </div>
+
+            @if ($specialCells->isNotEmpty() && ! $locked)
+                <aside class="special-rail" aria-labelledby="special-title" x-on:special-cell-applied.window="specialCell = null">
+                    <header class="special-rail__head">
+                        <h2 id="special-title">Adesivi del giorno</h2>
+                        <div class="special-help" x-bind:class="{ 'is-open': specialHelpOpen }">
+                            <button class="special-help__button" type="button" x-on:click="specialHelpOpen = ! specialHelpOpen" aria-label="Come funzionano gli adesivi" x-bind:aria-expanded="specialHelpOpen.toString()">?</button>
+                            <div class="special-help__body" x-show="specialHelpOpen" x-cloak>
+                                <strong>Come funzionano gli adesivi</strong>
+                                <p>Questi sono eventi speciali ed imperdibili! <br> Trascinando un adesivo su una cella, la coprirai con questo nuovo evento.<br> Usa l'astuzia per semplificare la scheda e distruggi i tuoi colleghi sul tempo!</p>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="special-rail__list">
+                        @foreach ($specialCells as $special)
+                            <button type="button" class="special-sticker" wire:key="special-sticker-{{ $special->id }}"
+                                draggable="true"
+                                data-special-cell-id="{{ $special->id }}"
+                                title="Trascina sulla scheda"
+                                x-bind:class="{ 'is-selected': specialCell === {{ $special->id }} }"
+                                x-on:dragstart="$event.dataTransfer.setData('text/plain', '{{ $special->id }}')"
+                                x-on:click="specialCell = {{ $special->id }}">
+                                <span>{{ $special->text }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                </aside>
+            @endif
         </div>
 
         <p class="hint">

@@ -2,12 +2,19 @@
     <div class="panel-head">
         <h2>Celle</h2>
         <span class="spacer"></span>
-        @if ($cellId)
-            <span class="mode-badge">Modifica cella</span>
-        @else
-            <span class="mode-badge is-new">Nuova cella</span>
-        @endif
+        <span class="mode-badge is-new">Nuova cella</span>
     </div>
+
+    @if ($cellId)
+        <div class="modal-backdrop" wire:click="cancel">
+            <section class="modal" wire:click.stop role="dialog" aria-modal="true" aria-label="Modifica cella">
+                <button class="btn is-ghost dialog-close" type="button" wire:click="cancel" aria-label="Chiudi">×</button>
+                <div class="panel-head">
+                    <h3 style="margin:0;">Modifica cella</h3>
+                    <span class="spacer"></span>
+                    <span class="mode-badge">Modifica cella</span>
+                </div>
+    @endif
 
     <form wire:submit="save" class="form-grid">
         <div class="field">
@@ -16,21 +23,14 @@
             @error('text') <p class="form-error">{{ $message }}</p> @enderror
         </div>
 
-        <div class="field-row">
-            <div class="field">
-                <span class="field-label">Difficoltà</span>
-                <div class="check-grid" role="radiogroup" aria-label="Difficoltà">
-                    @foreach (['1' => 'Facile', '2' => 'Media', '3' => 'Difficile'] as $value => $label)
-                        <label class="check"><input type="radio" wire:model="difficulty" value="{{ $value }}"> <span class="badge-diff d{{ $value }}">D{{ $value }}</span> {{ $label }}</label>
-                    @endforeach
-                </div>
-                @error('difficulty') <p class="form-error">{{ $message }}</p> @enderror
+        <div class="field">
+            <span class="field-label">Difficoltà</span>
+            <div class="check-grid" role="radiogroup" aria-label="Difficoltà">
+                @foreach (['1' => 'Facile', '2' => 'Media', '3' => 'Difficile'] as $value => $label)
+                    <label class="check"><input type="radio" wire:model="difficulty" value="{{ $value }}"> <span class="badge-diff d{{ $value }}">D{{ $value }}</span> {{ $label }}</label>
+                @endforeach
             </div>
-            <div class="field">
-                <label for="cell-date">Data speciale <span style="font-weight:700;">(opzionale)</span></label>
-                <input id="cell-date" type="date" wire:model="specialDate" @error('specialDate') aria-invalid="true" @enderror>
-                @error('specialDate') <p class="form-error">{{ $message }}</p> @enderror
-            </div>
+            @error('difficulty') <p class="form-error">{{ $message }}</p> @enderror
         </div>
 
         <label class="toggle"><input type="checkbox" wire:model="isActive"> Cella attiva</label>
@@ -63,6 +63,11 @@
         </div>
     </form>
 
+    @if ($cellId)
+            </section>
+        </div>
+    @endif
+
     <div class="record-list">
         @forelse ($cells as $cell)
             <button class="record" type="button" wire:click="edit({{ $cell->id }})" wire:key="cell-{{ $cell->id }}">
@@ -71,10 +76,7 @@
                 </span>
                 <span class="record-main">
                     <strong style="white-space:normal;">{{ $cell->text }}</strong>
-                    <span>
-                        {{ $cell->users->isNotEmpty() ? $cell->users->count().' utenti' : 'Tutti' }}
-                        @if ($cell->special_date) · 📅 {{ $cell->special_date->format('d/m/Y') }} @endif
-                    </span>
+                    <span>{{ $cell->users->isNotEmpty() ? $cell->users->count().' utenti' : 'Tutti' }}</span>
                 </span>
                 <span class="record-aside">
                     <span class="pill {{ $cell->is_active ? 'on' : 'off' }}">{{ $cell->is_active ? 'Attiva' : 'Off' }}</span>

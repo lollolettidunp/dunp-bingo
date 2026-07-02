@@ -42,17 +42,15 @@ class CreateDailyBoardTest extends TestCase
         $this->assertFalse($board->cells->pluck('text')->contains($weekday->text));
     }
 
-    public function test_it_always_includes_eligible_special_cells_and_keeps_snapshot(): void
+    public function test_it_excludes_daily_special_cells_from_generated_boards(): void
     {
         $user = User::factory()->create();
         $special = Cell::factory()->create(['text' => 'special', 'special_date' => '2026-06-23']);
         Cell::factory()->count(24)->create();
 
         $board = app(CreateDailyBoard::class)($user, CarbonImmutable::parse('2026-06-23'));
-        $special->update(['text' => 'changed']);
 
-        $this->assertTrue($board->cells->pluck('text')->contains('special'));
-        $this->assertFalse($board->fresh()->cells->pluck('text')->contains('changed'));
+        $this->assertFalse($board->cells->pluck('text')->contains($special->text));
     }
 
     public function test_it_returns_the_existing_board_without_regenerating_it(): void

@@ -1,7 +1,7 @@
 <div
     x-data="{ open: false }"
     x-on:keydown.escape.window="open = false"
-    wire:poll.30s
+    wire:poll.10s
 >
     <button type="button" class="missed-trigger" x-on:click="open = true"
         aria-haspopup="dialog" :aria-expanded="open.toString()">
@@ -34,7 +34,12 @@
 
         <div class="missed-drawer__body">
             @forelse ($entries as $entry)
-                <div class="missed-item" wire:key="missed-{{ $entry->id }}">
+                <div class="missed-item"
+                    wire:key="missed-{{ $entry->id }}"
+                    data-missed-entry-id="{{ $entry->id }}"
+                    data-missed-entry-user="{{ $entry->board->user->name }}"
+                    data-missed-entry-text="{{ $entry->text }}"
+                >
                     <x-avatar :user="$entry->board->user" :size="36" />
                     <div class="missed-item__text">
                         <p class="missed-item__line">
