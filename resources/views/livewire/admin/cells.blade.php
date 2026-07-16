@@ -45,7 +45,7 @@
         </fieldset>
 
         <fieldset class="fieldset">
-            <legend>Riguarda solo <span style="font-weight:700;">(vuoto = tutti)</span></legend>
+            <legend>Collegato a: <span style="font-weight:700;">(vuoto = tutti)</span></legend>
             <div class="check-grid">
                 @forelse ($users as $user)
                     <label class="check"><input type="checkbox" wire:model="userIds" value="{{ $user->id }}"> {{ $user->name }}</label>

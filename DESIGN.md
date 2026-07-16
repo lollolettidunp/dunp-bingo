@@ -15,6 +15,7 @@ colors:
   mint-check: "#34d399"
   marigold: "#ffd166"
   hot-pink: "#ff5c8a"
+  peer-check: "#f2426a"
   eyebrow-brown: "#6d5b2f"
   muted-ink: "#6f6a62"
   error-ink: "#7a271a"
@@ -144,6 +145,11 @@ every outline, shadow, and word together.
   bonus reads as "worth more" at a glance.
 - **BINGO Hot Pink** (`#ff5c8a`): Reserved almost entirely for the win. The fixed BINGO
   banner only. Its rarity is what makes it land.
+- **Peer-Check Red-Pink** (`#f2426a`): Never a fill — a dashed inner outline only. Flags a
+  square a colleague has already checked today (and you haven't), so you can spot what to
+  mark from the board itself without opening the "missed" feed. Redder and more urgent than
+  BINGO Hot Pink so the two never read as the same signal; it means "act on this", not "you
+  won".
 
 ### Tertiary
 - **Mint Check** (`#34d399`): The circular ✓ badge stamped on a marked square. Never used

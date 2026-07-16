@@ -21,7 +21,7 @@
                 <a href="{{ route('colleagues') }}" title="Guarda le schede dei colleghi">Colleghi</a>
                 <a href="{{ route('leaderboard') }}" title="Vedi i punti approvati">Classifica</a>
                 @if (strtolower(auth()->user()?->email ?? '') === strtolower(config('services.google.admin_email')))
-                    <a href="{{ route('admin') }}">Admin</a>
+                    <livewire:admin-badge />
                 @endif
                 <form method="post" action="{{ route('logout') }}">
                     @csrf

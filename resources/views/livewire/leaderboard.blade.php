@@ -57,7 +57,7 @@
         @if ($rest->isNotEmpty())
             <ol class="lb-list" start="4">
                 @foreach ($rest as $i => $user)
-                    @php $rank = $i + 4; $isMe = $user->id === $meId; @endphp
+                    @php $rank = $i + 1; $isMe = $user->id === $meId; @endphp
                     <li class="lb-row {{ $isMe ? 'is-me' : '' }}" title="Punti totali di {{ $user->name }}">
                         <span class="lb-rank">{{ $rank }}</span>
                         <x-avatar :user="$user" :size="40" />

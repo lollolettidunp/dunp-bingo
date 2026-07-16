@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Actions\CreateDailyBoard;
 use App\Models\Board;
+use App\Models\BoardCell;
 use App\Models\Cell;
 use Carbon\CarbonImmutable;
 use DomainException;
@@ -28,7 +29,6 @@ class DailyBoard extends Component
     public function toggle(int $position): void
     {
         abort_unless($this->board?->user_id === auth()->id(), 403);
-        abort_unless(in_array($this->board->status, [Board::PLAYING, Board::REJECTED], true), 409);
         abort_if($position === 12, 422);
 
         $this->board->load('cells');
@@ -49,7 +49,6 @@ class DailyBoard extends Component
     public function applySpecialCell(int $cellId, int $position): void
     {
         abort_unless($this->board?->user_id === auth()->id(), 403);
-        abort_unless(in_array($this->board->status, [Board::PLAYING, Board::REJECTED], true), 409);
         abort_if($position === Board::BONUS_POSITION, 422);
 
         $special = $this->specialCells()->firstWhere('id', $cellId);
@@ -81,7 +80,24 @@ class DailyBoard extends Component
         return view('livewire.daily-board', [
             'specialAppliedCellIds' => $this->specialAppliedCellIds(),
             'specialCells' => $this->specialCells(),
+            'missedCellIds' => $this->missedCellIds(),
         ]);
+    }
+
+    /**
+     * Cell ids a colleague already checked today that I still haven't — the same
+     * set shown in the "missed" feed. Used to flag them on my own board so I can
+     * spot what to mark without scrolling the notifications.
+     */
+    private function missedCellIds(): array
+    {
+        if (! $this->board) {
+            return [];
+        }
+
+        return BoardCell::missedEntriesFor(auth()->id())
+            ->pluck('cell_id')
+            ->all();
     }
 
     private function specialAppliedCellIds(): array

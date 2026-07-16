@@ -16,7 +16,7 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'google_id', 'avatar_url', 'is_enabled', 'starting_score'];
+    protected $fillable = ['name', 'email', 'password', 'google_id', 'avatar_url', 'is_enabled', 'is_present', 'starting_score'];
 
     public function boards(): HasMany
     {
@@ -33,6 +33,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_enabled' => 'boolean',
+            'is_present' => 'boolean',
             'starting_score' => 'integer',
             'password' => 'hashed',
         ];

@@ -12,7 +12,7 @@
             $hasBingo = $board->hasBingo();
             $remaining = $board->squaresFromBingo();
             $winning = $board->winningPositions();
-            $locked = in_array($status, [\App\Models\Board::PENDING, \App\Models\Board::APPROVED], true);
+            $locked = false;
             $canSubmit = $hasBingo && in_array($status, [\App\Models\Board::PLAYING, \App\Models\Board::REJECTED], true);
         @endphp
 
@@ -92,7 +92,7 @@
                 <div class="board {{ $locked ? 'readonly' : '' }}" x-bind:class="{ 'is-receiving-sticker': specialCell }">
                     @foreach ($board->cells as $cell)
                         <button type="button"
-                            class="cell {{ $cell->marked_at ? 'marked' : '' }} {{ $cell->position === 12 ? 'bonus' : '' }} {{ in_array($cell->position, $winning, true) ? 'win' : '' }} {{ in_array($cell->cell_id, $specialAppliedCellIds, true) ? 'special-applied' : '' }} {{ $cell->marked_at && in_array($cell->cell_id, $specialAppliedCellIds, true) ? 'special-completed' : '' }}"
+                            class="cell {{ $cell->marked_at ? 'marked' : '' }} {{ $cell->position === 12 ? 'bonus' : '' }} {{ in_array($cell->position, $winning, true) ? 'win' : '' }} {{ in_array($cell->cell_id, $specialAppliedCellIds, true) ? 'special-applied' : '' }} {{ $cell->marked_at && in_array($cell->cell_id, $specialAppliedCellIds, true) ? 'special-completed' : '' }} {{ ! $cell->marked_at && $cell->cell_id && in_array($cell->cell_id, $missedCellIds, true) ? 'missed-hint' : '' }}"
                             data-position="{{ $cell->position }}"
                             title="{{ $cell->position === 12 ? 'Bonus gratis' : ($locked ? 'Scheda bloccata durante la revisione' : ($cell->marked_at ? 'Tocca per togliere il segno' : 'Tocca per segnare questa casella')) }}"
                             x-on:dragover.prevent

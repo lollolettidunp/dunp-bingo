@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\DailyBoard;
 use App\Models\Board;
+use App\Models\BoardCell;
 use App\Models\Cell;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,7 +16,7 @@ class DailyBoardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_owner_can_toggle_submit_and_lock_a_valid_bingo(): void
+    public function test_owner_can_toggle_and_submit_a_valid_bingo(): void
     {
         $user = User::factory()->create();
         Cell::factory()->count(30)->create();
@@ -29,7 +30,41 @@ class DailyBoardTest extends TestCase
         $board = Board::first();
         $this->assertSame(Board::PENDING, $board->status);
         $this->assertNotNull($board->submitted_at);
-        $test->call('toggle', 5)->assertStatus(409);
+    }
+
+    public function test_owner_can_keep_toggling_while_board_is_pending(): void
+    {
+        $user = User::factory()->create();
+        Cell::factory()->count(30)->create();
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        foreach ([0, 1, 2, 3, 4] as $position) {
+            $test->call('toggle', $position);
+        }
+        $test->call('submit');
+
+        $this->assertSame(Board::PENDING, Board::first()->status);
+
+        $test->call('toggle', 5)->assertStatus(200);
+        $this->assertNotNull(Board::first()->cells()->where('position', 5)->first()->marked_at);
+    }
+
+    public function test_owner_can_keep_toggling_after_bingo_is_approved(): void
+    {
+        $user = User::factory()->create();
+        Cell::factory()->count(30)->create();
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        foreach ([0, 1, 2, 3, 4] as $position) {
+            $test->call('toggle', $position);
+        }
+        $test->call('submit');
+
+        $board = Board::first();
+        $board->update(['status' => Board::APPROVED, 'reviewed_at' => now()]);
+
+        $test->call('toggle', 5)->assertStatus(200);
+        $this->assertNotNull($board->cells()->where('position', 5)->first()->marked_at);
     }
 
     public function test_board_statuses_have_user_facing_labels(): void
@@ -92,6 +127,45 @@ class DailyBoardTest extends TestCase
         $test->call('toggle', 0)
             ->assertSee('special-completed', false);
     }
+    public function test_it_flags_cells_a_colleague_already_checked(): void
+    {
+        $viewer = User::factory()->create();
+        $colleague = User::factory()->create();
+        $shared = Cell::factory()->create(['text' => 'Caffè versato']);
+        $mine = Cell::factory()->create(['text' => 'Stampante rotta']);
+
+        // Pre-costruisco la board del viewer: mount riusa quella di oggi.
+        $board = Board::factory()->for($viewer)->create(['played_on' => today()]);
+        BoardCell::factory()->for($board)->create(['cell_id' => $shared->id, 'position' => 0, 'text' => 'Caffè versato']);
+        BoardCell::factory()->for($board)->create(['cell_id' => $mine->id, 'position' => 1, 'text' => 'Stampante rotta']);
+
+        // Un collega ha checkato la casella condivisa: deve comparire evidenziata.
+        $his = Board::factory()->for($colleague)->create(['played_on' => today()]);
+        BoardCell::factory()->for($his)->create(['cell_id' => $shared->id, 'position' => 3, 'text' => 'Caffè versato', 'marked_at' => now()]);
+
+        Livewire::actingAs($viewer)->test(DailyBoard::class)
+            ->assertSee('missed-hint', false)
+            ->assertViewHas('missedCellIds', fn ($ids) => in_array($shared->id, $ids, true) && ! in_array($mine->id, $ids, true));
+    }
+
+    public function test_it_stops_flagging_a_cell_once_the_viewer_marks_it(): void
+    {
+        $viewer = User::factory()->create();
+        $colleague = User::factory()->create();
+        $shared = Cell::factory()->create(['text' => 'Caffè versato']);
+
+        $board = Board::factory()->for($viewer)->create(['played_on' => today()]);
+        BoardCell::factory()->for($board)->create(['cell_id' => $shared->id, 'position' => 0, 'text' => 'Caffè versato']);
+
+        $his = Board::factory()->for($colleague)->create(['played_on' => today()]);
+        BoardCell::factory()->for($his)->create(['cell_id' => $shared->id, 'position' => 3, 'text' => 'Caffè versato', 'marked_at' => now()]);
+
+        Livewire::actingAs($viewer)->test(DailyBoard::class)
+            ->assertSee('missed-hint', false)
+            ->call('toggle', 0)
+            ->assertDontSee('missed-hint', false);
+    }
+
     public function test_daily_sticker_help_replaces_count_badge(): void
     {
         Carbon::setTestNow('2026-06-23 10:00:00');
