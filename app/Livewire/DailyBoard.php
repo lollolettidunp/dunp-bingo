@@ -9,6 +9,7 @@ use App\Models\Cell;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class DailyBoard extends Component
@@ -46,22 +47,74 @@ class DailyBoard extends Component
         }
     }
 
+    /**
+     * Puts a daily sticker on a cell. If the sticker is already on the board it
+     * is moved instead: its old cell gets the covered cell back (fixes misclicks).
+     */
     public function applySpecialCell(int $cellId, int $position): void
     {
         abort_unless($this->board?->user_id === auth()->id(), 403);
         abort_if($position === Board::BONUS_POSITION, 422);
 
-        $special = $this->specialCells()->firstWhere('id', $cellId);
-        abort_unless($special, 404);
+        $target = $this->board->cells()->where('position', $position)->firstOrFail();
+        $source = $this->board->cells()->where('cell_id', $cellId)->first();
 
-        $this->board->cells()->where('position', $position)->firstOrFail()->update([
-            'cell_id' => $special->id,
-            'text' => $special->text,
-            'difficulty' => $special->difficulty,
-            'marked_at' => null,
-        ]);
+        if ($source) {
+            abort_unless($source->isCovering(), 409);
+            if ($source->is($target)) {
+                return;
+            }
+            DB::transaction(fn () => $this->moveSticker($source, $target));
+        } else {
+            $special = $this->specialCells()->firstWhere('id', $cellId);
+            abort_unless($special, 404);
+
+            $target->update([
+                ...($target->isCovering() ? [] : $this->coveredSnapshot($target)),
+                'cell_id' => $special->id,
+                'text' => $special->text,
+                'difficulty' => $special->difficulty,
+                'marked_at' => null,
+            ]);
+        }
+
         $this->board->refresh()->load('cells');
         $this->dispatch('special-cell-applied', position: $position);
+    }
+
+    /** Stickers carry their mark along; landing on another sticker swaps the two. */
+    private function moveSticker(BoardCell $source, BoardCell $target): void
+    {
+        $sticker = $source->only(['cell_id', 'text', 'difficulty', 'marked_at']);
+
+        if ($target->isCovering()) {
+            $source->update($target->only(['cell_id', 'text', 'difficulty', 'marked_at']));
+            $target->update($sticker);
+
+            return;
+        }
+
+        $target->update([...$this->coveredSnapshot($target), ...$sticker]);
+        $source->update([
+            'cell_id' => $source->covered_cell_id,
+            'text' => $source->covered_text,
+            'difficulty' => $source->covered_difficulty,
+            'marked_at' => $source->covered_marked_at,
+            'covered_cell_id' => null,
+            'covered_text' => null,
+            'covered_difficulty' => null,
+            'covered_marked_at' => null,
+        ]);
+    }
+
+    private function coveredSnapshot(BoardCell $cell): array
+    {
+        return [
+            'covered_cell_id' => $cell->cell_id,
+            'covered_text' => $cell->text,
+            'covered_difficulty' => $cell->difficulty,
+            'covered_marked_at' => $cell->marked_at,
+        ];
     }
 
     public function submit(): void
@@ -76,10 +129,14 @@ class DailyBoard extends Component
     public function render()
     {
         $this->board?->load('cells');
+        $specialAppliedCellIds = $this->specialAppliedCellIds();
 
         return view('livewire.daily-board', [
-            'specialAppliedCellIds' => $this->specialAppliedCellIds(),
+            'specialAppliedCellIds' => $specialAppliedCellIds,
             'specialCells' => $this->specialCells(),
+            'placedSpecials' => $this->board?->cells
+                ->filter(fn (BoardCell $cell) => $cell->isCovering() && in_array($cell->cell_id, $specialAppliedCellIds, true))
+                ->values() ?? collect(),
             'missedCellIds' => $this->missedCellIds(),
         ]);
     }

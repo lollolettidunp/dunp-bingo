@@ -17,7 +17,7 @@ class ReplaceInvalidBoardCells
             Board::with(['user', 'cells'])
                 ->whereDate('played_on', $date)
                 ->whereIn('status', [Board::PLAYING, Board::REJECTED])
-                ->whereHas('cells', fn ($query) => $query->where('cell_id', $changed->id))
+                ->whereHas('cells', fn ($query) => $query->where('cell_id', $changed->id)->orWhere('covered_cell_id', $changed->id))
                 ->get()
                 ->each(fn (Board $board) => $this->replaceForBoard($board, $changed, $date));
         });
@@ -27,6 +27,18 @@ class ReplaceInvalidBoardCells
     {
         if ($this->eligible($changed, $board->user, $date)) {
             return;
+        }
+
+        // Hidden under a sticker: swap the snapshot silently so moving the sticker never restores it.
+        foreach ($board->cells->where('covered_cell_id', $changed->id) as $boardCell) {
+            $replacement = $this->replacement($board, $date);
+            $boardCell->update($replacement ? [
+                'covered_cell_id' => $replacement->id,
+                'covered_text' => $replacement->text,
+                'covered_difficulty' => $replacement->difficulty,
+                'covered_marked_at' => null,
+            ] : ['covered_cell_id' => null]);
+            $board->load('cells');
         }
 
         foreach ($board->cells->where('cell_id', $changed->id) as $boardCell) {
@@ -46,7 +58,7 @@ class ReplaceInvalidBoardCells
 
     private function replacement(Board $board, CarbonImmutable $date): ?Cell
     {
-        $used = $board->cells->pluck('cell_id')->filter()->all();
+        $used = $board->cells->pluck('cell_id')->merge($board->cells->pluck('covered_cell_id'))->filter()->all();
 
         return Cell::query()
             ->where('is_active', true)
@@ -74,6 +86,10 @@ class ReplaceInvalidBoardCells
             'text' => $replacement->text,
             'difficulty' => $replacement->difficulty,
             'marked_at' => null,
+            'covered_cell_id' => null,
+            'covered_text' => null,
+            'covered_difficulty' => null,
+            'covered_marked_at' => null,
         ]);
     }
 }

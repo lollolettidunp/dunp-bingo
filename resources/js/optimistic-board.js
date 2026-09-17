@@ -34,7 +34,8 @@ export function installOptimisticBoard({ showFace, showBingo }) {
     if (!cell || cell.disabled || cell.classList.contains('bonus') || cell.closest('.readonly')) return;
 
     const board = cell.closest('.board');
-    if (!board) return;
+    // A selected sticker turns this tap into "place/move sticker here", not a mark.
+    if (!board || board.classList.contains('is-receiving-sticker')) return;
 
     const position = Number(cell.dataset.position);
     const marked = !cell.classList.contains('marked');

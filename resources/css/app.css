@@ -339,7 +339,14 @@ h2 { margin-top: 0; }
 .special-sticker:hover, .special-sticker.is-selected { transform: translate(-2px, -2px) rotate(-1deg); box-shadow: 7px 7px 0 #1d1d1f; }
 .special-sticker.is-dragging { opacity: .62; transform: rotate(-3deg) scale(.96); cursor: grabbing; }
 .special-sticker:active { cursor: grabbing; }
-.special-sticker span:last-child { min-width: 0; overflow-wrap: anywhere; line-height: 1.18; }
+.special-sticker > span { min-width: 0; overflow-wrap: anywhere; line-height: 1.18; }
+.special-sticker.is-placed { gap: 6px; background: #fff3a3; border-style: dashed; }
+.special-sticker__tag { padding: 2px 8px; border: 2px solid #1d1d1f; border-radius: 999px; background: #fffdf8; font-size: .78rem; font-weight: 900; line-height: 1.2; }
+.special-rail__placed { display: grid; gap: 8px; }
+.special-rail__list + .special-rail__placed { padding-top: 10px; border-top: 2px dashed #1d1d1f; }
+.special-rail__label { margin: 0; font-size: .78rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+.cell[draggable="true"] { cursor: grab; }
+.cell.is-dragging, .cell.is-move-source { opacity: .5; }
 @keyframes stickerLand { 0% { transform: scale(.92) rotate(-2deg); background: #ffd166; } 48% { transform: scale(1.08) rotate(1deg); background: #ff5c8a; } 100% { transform: scale(1); } }
 @media (max-width: 980px) { .board-play-area.has-specials { grid-template-columns: 1fr; } .special-rail { position: static; max-height: none; } .special-rail__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); padding: 2px 4px 10px 0; } .special-sticker { min-width: 0; } }
 @media (max-width: 720px) { .special-rail { padding: 10px; box-shadow: 5px 5px 0 #1d1d1f; } .special-rail__head h2 { font-size: .95rem; } .special-rail__list { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); } .special-sticker { min-height: 78px; padding: 7px; } }

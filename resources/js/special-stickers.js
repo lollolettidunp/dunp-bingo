@@ -10,7 +10,8 @@ export function installSpecialStickers() {
   let draggedId = null;
 
   document.addEventListener('dragstart', (event) => {
-    const sticker = event.target.closest('.special-sticker[data-special-cell-id]');
+    // Rail stickers, or a sticker already on the board being moved elsewhere.
+    const sticker = event.target.closest?.('.special-sticker[data-special-cell-id], .cell[data-special-cell-id]');
     if (!sticker) return;
 
     draggedId = sticker.dataset.specialCellId;
@@ -22,7 +23,7 @@ export function installSpecialStickers() {
   });
 
   document.addEventListener('dragend', (event) => {
-    event.target.closest('.special-sticker')?.classList.remove('is-dragging');
+    event.target.closest?.('[data-special-cell-id]')?.classList.remove('is-dragging');
     clearStickerDragState();
     draggedId = null;
   });
@@ -78,7 +79,7 @@ function stickerTarget(target) {
 
 function clearStickerDragState() {
   document.querySelector('.board')?.classList.remove('is-receiving-sticker');
-  document.querySelectorAll('.special-sticker.is-dragging').forEach((sticker) => sticker.classList.remove('is-dragging'));
+  document.querySelectorAll('[data-special-cell-id].is-dragging').forEach((sticker) => sticker.classList.remove('is-dragging'));
   clearStickerTargets();
 }
 

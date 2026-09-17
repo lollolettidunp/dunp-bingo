@@ -87,14 +87,21 @@
             </div>
         @endunless
 
-        <div class="board-play-area {{ $specialCells->isNotEmpty() && ! $locked ? 'has-specials' : '' }}">
+        @php $showSpecials = ($specialCells->isNotEmpty() || $placedSpecials->isNotEmpty()) && ! $locked; @endphp
+        <div class="board-play-area {{ $showSpecials ? 'has-specials' : '' }}">
             <div class="board-wrap {{ $locked ? 'is-locked' : '' }}">
                 <div class="board {{ $locked ? 'readonly' : '' }}" x-bind:class="{ 'is-receiving-sticker': specialCell }">
                     @foreach ($board->cells as $cell)
+                        @php $movable = ! $locked && $placedSpecials->contains('position', $cell->position); @endphp
                         <button type="button"
                             class="cell {{ $cell->marked_at ? 'marked' : '' }} {{ $cell->position === 12 ? 'bonus' : '' }} {{ in_array($cell->position, $winning, true) ? 'win' : '' }} {{ in_array($cell->cell_id, $specialAppliedCellIds, true) ? 'special-applied' : '' }} {{ $cell->marked_at && in_array($cell->cell_id, $specialAppliedCellIds, true) ? 'special-completed' : '' }} {{ ! $cell->marked_at && $cell->cell_id && in_array($cell->cell_id, $missedCellIds, true) ? 'missed-hint' : '' }}"
                             data-position="{{ $cell->position }}"
-                            title="{{ $cell->position === 12 ? 'Bonus gratis' : ($locked ? 'Scheda bloccata durante la revisione' : ($cell->marked_at ? 'Tocca per togliere il segno' : 'Tocca per segnare questa casella')) }}"
+                            @if ($movable)
+                                draggable="true"
+                                data-special-cell-id="{{ $cell->cell_id }}"
+                                x-bind:class="{ 'is-move-source': specialCell === {{ $cell->cell_id }} }"
+                            @endif
+                            title="{{ $cell->position === 12 ? 'Bonus gratis' : ($locked ? 'Scheda bloccata durante la revisione' : ($cell->marked_at ? 'Tocca per togliere il segno' : 'Tocca per segnare questa casella')) }}{{ $movable ? ' · trascina per spostare l\'adesivo' : '' }}"
                             x-on:dragover.prevent
                             x-on:drop.prevent="$wire.applySpecialCell(Number($event.dataTransfer.getData('text/plain')), {{ $cell->position }})"
                             x-on:click="if (specialCell) { $wire.applySpecialCell(specialCell, {{ $cell->position }}); specialCell = null; $event.preventDefault(); $event.stopImmediatePropagation(); }"
@@ -106,7 +113,7 @@
                 </div>
             </div>
 
-            @if ($specialCells->isNotEmpty() && ! $locked)
+            @if ($showSpecials)
                 <aside class="special-rail" aria-labelledby="special-title" x-on:special-cell-applied.window="specialCell = null">
                     <header class="special-rail__head">
                         <h2 id="special-title">Adesivi del giorno</h2>
@@ -115,23 +122,45 @@
                             <div class="special-help__body" x-show="specialHelpOpen" x-cloak>
                                 <strong>Come funzionano gli adesivi</strong>
                                 <p>Questi sono eventi speciali ed imperdibili! <br> Trascinando un adesivo su una cella, la coprirai con questo nuovo evento.<br> Usa l'astuzia per semplificare la scheda e distruggi i tuoi colleghi sul tempo!</p>
+                                <p>Casella sbagliata? Trascina l'adesivo dalla scheda su un'altra casella, oppure toccalo in "Sulla scheda" e poi tocca la nuova casella: quella coperta torna com'era.</p>
                             </div>
                         </div>
                     </header>
 
-                    <div class="special-rail__list">
-                        @foreach ($specialCells as $special)
-                            <button type="button" class="special-sticker" wire:key="special-sticker-{{ $special->id }}"
-                                draggable="true"
-                                data-special-cell-id="{{ $special->id }}"
-                                title="Trascina sulla scheda"
-                                x-bind:class="{ 'is-selected': specialCell === {{ $special->id }} }"
-                                x-on:dragstart="$event.dataTransfer.setData('text/plain', '{{ $special->id }}')"
-                                x-on:click="specialCell = {{ $special->id }}">
-                                <span>{{ $special->text }}</span>
-                            </button>
-                        @endforeach
-                    </div>
+                    @if ($specialCells->isNotEmpty())
+                        <div class="special-rail__list">
+                            @foreach ($specialCells as $special)
+                                <button type="button" class="special-sticker" wire:key="special-sticker-{{ $special->id }}"
+                                    draggable="true"
+                                    data-special-cell-id="{{ $special->id }}"
+                                    title="Trascina sulla scheda"
+                                    x-bind:class="{ 'is-selected': specialCell === {{ $special->id }} }"
+                                    x-on:dragstart="$event.dataTransfer.setData('text/plain', '{{ $special->id }}')"
+                                    x-on:click="specialCell = specialCell === {{ $special->id }} ? null : {{ $special->id }}">
+                                    <span>{{ $special->text }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if ($placedSpecials->isNotEmpty())
+                        <div class="special-rail__placed">
+                            <h3 class="special-rail__label">Sulla scheda</h3>
+                            <div class="special-rail__list">
+                                @foreach ($placedSpecials as $placed)
+                                    <button type="button" class="special-sticker is-placed" wire:key="placed-sticker-{{ $placed->cell_id }}"
+                                        draggable="true"
+                                        data-special-cell-id="{{ $placed->cell_id }}"
+                                        title="Tocca e scegli la nuova casella per spostarlo"
+                                        x-bind:class="{ 'is-selected': specialCell === {{ $placed->cell_id }} }"
+                                        x-on:click="specialCell = specialCell === {{ $placed->cell_id }} ? null : {{ $placed->cell_id }}">
+                                        <span>{{ $placed->text }}</span>
+                                        <small class="special-sticker__tag">↔ Sposta</small>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 </aside>
             @endif
         </div>

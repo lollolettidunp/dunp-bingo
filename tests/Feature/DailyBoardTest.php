@@ -127,6 +127,98 @@ class DailyBoardTest extends TestCase
         $test->call('toggle', 0)
             ->assertSee('special-completed', false);
     }
+    public function test_user_moves_a_placed_sticker_and_gets_the_covered_cell_back(): void
+    {
+        Carbon::setTestNow('2026-06-23 10:00:00');
+        $user = User::factory()->create();
+        Cell::factory()->count(24)->create();
+        $sticker = Cell::factory()->create(['text' => 'Sticker one-time', 'special_date' => '2026-06-23']);
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $board = Board::first();
+        $misclicked = $board->cells()->where('position', 0)->first();
+        $misclicked->update(['marked_at' => now()]);
+        $original = $misclicked->only(['cell_id', 'text', 'difficulty']);
+        $wanted = $board->cells()->where('position', 1)->first();
+        $wantedOriginal = $wanted->only(['cell_id', 'text', 'difficulty']);
+
+        $test->call('applySpecialCell', $sticker->id, 0)
+            ->assertSee('Sulla scheda')
+            ->assertSee('data-special-cell-id="'.$sticker->id.'"', false);
+        $test->call('toggle', 0);
+        $test->call('applySpecialCell', $sticker->id, 1)
+            ->assertDispatched('special-cell-applied', position: 1)
+            ->assertViewHas('specialCells', fn ($cells) => $cells->doesntContain('id', $sticker->id));
+
+        $misclicked->refresh();
+        $this->assertSame($original, $misclicked->only(['cell_id', 'text', 'difficulty']));
+        $this->assertNotNull($misclicked->marked_at, 'the covered cell gets its own mark back');
+        $this->assertFalse($misclicked->isCovering());
+
+        $wanted->refresh();
+        $this->assertSame($sticker->id, $wanted->cell_id);
+        $this->assertNotNull($wanted->marked_at, 'the sticker carries its mark along');
+        $this->assertSame($wantedOriginal, [
+            'cell_id' => $wanted->covered_cell_id,
+            'text' => $wanted->covered_text,
+            'difficulty' => $wanted->covered_difficulty,
+        ]);
+    }
+
+    public function test_moving_a_sticker_onto_another_sticker_swaps_them(): void
+    {
+        Carbon::setTestNow('2026-06-23 10:00:00');
+        $user = User::factory()->create();
+        Cell::factory()->count(24)->create();
+        $first = Cell::factory()->create(['text' => 'Primo adesivo', 'special_date' => '2026-06-23']);
+        $second = Cell::factory()->create(['text' => 'Secondo adesivo', 'special_date' => '2026-06-23']);
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $board = Board::first();
+        $covered = $board->cells()->whereIn('position', [0, 1])->pluck('text', 'position');
+
+        $test->call('applySpecialCell', $first->id, 0)
+            ->call('applySpecialCell', $second->id, 1)
+            ->call('applySpecialCell', $first->id, 1);
+
+        $cells = $board->cells()->whereIn('position', [0, 1])->get()->keyBy('position');
+        $this->assertSame($second->id, $cells[0]->cell_id);
+        $this->assertSame($first->id, $cells[1]->cell_id);
+        $this->assertSame($covered[0], $cells[0]->covered_text);
+        $this->assertSame($covered[1], $cells[1]->covered_text);
+    }
+
+    public function test_replacing_a_sticker_with_another_keeps_the_original_covered_cell(): void
+    {
+        Carbon::setTestNow('2026-06-23 10:00:00');
+        $user = User::factory()->create();
+        Cell::factory()->count(24)->create();
+        $first = Cell::factory()->create(['text' => 'Primo adesivo', 'special_date' => '2026-06-23']);
+        $second = Cell::factory()->create(['text' => 'Secondo adesivo', 'special_date' => '2026-06-23']);
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $original = Board::first()->cells()->where('position', 0)->value('text');
+
+        $test->call('applySpecialCell', $first->id, 0)
+            ->call('applySpecialCell', $second->id, 0)
+            ->assertViewHas('specialCells', fn ($cells) => $cells->contains('id', $first->id));
+
+        $cell = Board::first()->cells()->where('position', 0)->first();
+        $this->assertSame($second->id, $cell->cell_id);
+        $this->assertSame($original, $cell->covered_text);
+    }
+
+    public function test_ordinary_cells_cannot_be_moved_like_stickers(): void
+    {
+        $user = User::factory()->create();
+        Cell::factory()->count(30)->create();
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $ordinary = Board::first()->cells()->where('position', 0)->value('cell_id');
+
+        $test->call('applySpecialCell', $ordinary, 1)->assertStatus(409);
+    }
+
     public function test_it_flags_cells_a_colleague_already_checked(): void
     {
         $viewer = User::factory()->create();

@@ -13,7 +13,10 @@ class BoardCell extends Model
     /** @use HasFactory<BoardCellFactory> */
     use HasFactory;
 
-    protected $fillable = ['board_id', 'cell_id', 'position', 'text', 'difficulty', 'marked_at'];
+    protected $fillable = [
+        'board_id', 'cell_id', 'position', 'text', 'difficulty', 'marked_at',
+        'covered_cell_id', 'covered_text', 'covered_difficulty', 'covered_marked_at',
+    ];
 
     protected function casts(): array
     {
@@ -21,12 +24,20 @@ class BoardCell extends Model
             'difficulty' => 'integer',
             'position' => 'integer',
             'marked_at' => 'datetime',
+            'covered_difficulty' => 'integer',
+            'covered_marked_at' => 'datetime',
         ];
     }
 
     public function board(): BelongsTo
     {
         return $this->belongsTo(Board::class);
+    }
+
+    /** True when a daily sticker sits on top of an ordinary cell we can restore. */
+    public function isCovering(): bool
+    {
+        return $this->covered_text !== null;
     }
 
     /**
