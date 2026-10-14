@@ -21,7 +21,7 @@ class ReplaceInvalidBoardCellsTest extends TestCase
         $blocked = Cell::factory()->create(['text' => 'Assente straordinario']);
         $replacement = Cell::factory()->create(['text' => 'Nuova valida', 'difficulty' => 3]);
         Cell::factory()->count(24)->create();
-        $board = Board::factory()->for($user)->create(['played_on' => '2026-06-23', 'status' => Board::PLAYING]);
+        $board = Board::factory()->for($user)->create(['played_on' => '2026-06-23']);
         BoardCell::factory()->for($board)->create([
             'cell_id' => $blocked->id,
             'position' => 4,
@@ -52,7 +52,7 @@ class ReplaceInvalidBoardCellsTest extends TestCase
         $blocked = Cell::factory()->create(['text' => 'Assente straordinario']);
         $replacement = Cell::factory()->create(['text' => 'Nuova valida', 'difficulty' => 3]);
         $sticker = Cell::factory()->create(['text' => 'Adesivo', 'special_date' => '2026-06-23']);
-        $board = Board::factory()->for($user)->create(['played_on' => '2026-06-23', 'status' => Board::PLAYING]);
+        $board = Board::factory()->for($user)->create(['played_on' => '2026-06-23']);
         $cell = BoardCell::factory()->for($board)->create([
             'cell_id' => $sticker->id,
             'position' => 4,

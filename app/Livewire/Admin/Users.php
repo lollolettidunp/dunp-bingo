@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Admin;
 
+use App\Actions\RegenerateDailyBoard;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -56,6 +58,16 @@ class Users extends Component
         $this->resetForm();
     }
 
+    public function regenerateBoard(int $id, RegenerateDailyBoard $regenerate): void
+    {
+        $this->authorizeAdmin();
+        $user = User::findOrFail($id);
+
+        $this->dispatch('admin-saved', message: $regenerate($user, CarbonImmutable::today(config('app.timezone')))
+            ? "Scheda di {$user->name} rigenerata: riparte dalla bustina"
+            : "{$user->name} non ha ancora aperto la bustina di oggi");
+    }
+
     private function resetForm(): void
     {
         $this->reset(['userId', 'email', 'name']);
@@ -66,7 +78,14 @@ class Users extends Component
 
     public function render()
     {
-        return view('livewire.admin.users', ['users' => User::orderBy('name')->get()]);
+        $today = CarbonImmutable::today(config('app.timezone'));
+
+        return view('livewire.admin.users', [
+            // Today's board (if the pack was opened) decides whether a row offers "Rigenera scheda".
+            'users' => User::with(['boards' => fn ($boards) => $boards->whereDate('played_on', $today)->withCount('submissions')])
+                ->orderBy('name')
+                ->get(),
+        ]);
     }
 
     private function authorizeAdmin(): void

@@ -133,6 +133,14 @@ h2 { margin-top: 0; }
 .record-main span { color: #6f6a62; font-size: .8rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .record-aside { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .record-edit { font-size: .74rem; font-weight: 900; color: #6f6a62; }
+/* A row that opens on click and also carries its own button: the hit area stretches under it. */
+.record.has-action { position: relative; }
+.record.has-action .record-main { flex: 1 1 180px; }
+.record-hit { padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.record-hit::after { content: ''; position: absolute; inset: -2px; border-radius: 8px; }
+.record-hit:focus-visible { outline: none; }
+.record-hit:focus-visible::after { outline: 3px solid #1d1d1f; outline-offset: 2px; }
+.record-action { position: relative; z-index: 1; }
 
 /* Reviews */
 .review-card { display: grid; gap: 10px; }
@@ -351,3 +359,104 @@ h2 { margin-top: 0; }
 @media (max-width: 980px) { .board-play-area.has-specials { grid-template-columns: 1fr; } .special-rail { position: static; max-height: none; } .special-rail__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); padding: 2px 4px 10px 0; } .special-sticker { min-width: 0; } }
 @media (max-width: 720px) { .special-rail { padding: 10px; box-shadow: 5px 5px 0 #1d1d1f; } .special-rail__head h2 { font-size: .95rem; } .special-rail__list { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); } .special-sticker { min-height: 78px; padding: 7px; } }
 @media (prefers-reduced-motion: reduce) { .special-sticker, .cell.is-sticker-target { transition: opacity 120ms ease; } .special-sticker:hover, .special-sticker.is-selected, .special-sticker.is-dragging, .cell.is-sticker-target { transform: none; } .cell.is-sticker-applied, .cell.special-applied:hover::before, .cell.special-applied.is-sticker-applied::before { animation: none; } }
+
+/* ============ Points & periods ============ */
+.statetag.s-bonus { background: #ff5c8a; color: #fffdf8; border-color: #1d1d1f; }
+.board-status.is-ready { background: #d9f99d; }
+.board-status__chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.board-status__chips:empty { display: none; }
+.lb-filters { display: flex; gap: 0; margin-bottom: 10px; border: 2px solid #1d1d1f; border-radius: 999px; background: #fffdf8; box-shadow: 4px 4px 0 #1d1d1f; overflow: hidden; }
+.lb-filter { flex: 1; padding: 9px 12px; border: 0; border-right: 2px solid #1d1d1f; background: transparent; color: #1d1d1f; font: inherit; font-weight: 900; font-size: .84rem; text-transform: uppercase; letter-spacing: .02em; cursor: pointer; transition: background 120ms ease; }
+.lb-filter:last-child { border-right: 0; }
+.lb-filter:hover { background: #f8f2e9; }
+.lb-filter.is-active { background: #ffd166; }
+.lb-filter:focus-visible { outline: 3px solid #1d1d1f; outline-offset: -3px; }
+.lb-period { margin: 0 0 14px; font-size: .82rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; color: #1d1d1f; opacity: .72; }
+.review-award { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; font-weight: 800; }
+.review-award strong { font-size: 1.05rem; font-weight: 900; }
+.review-award small { font-weight: 800; opacity: .72; }
+.review-warning { margin: 0 0 8px; padding: 8px 10px; border: 2px solid #b42318; border-radius: 8px; background: #fff1f0; color: #7a271a; font-size: .84rem; font-weight: 800; }
+@media (max-width: 720px) { .lb-filter { padding: 8px 6px; font-size: .76rem; } }
+@media (prefers-reduced-motion: reduce) { .lb-filter { transition: none; } }
+
+/* ============ Sticker pack: the step before the board is dealt ============ */
+.pack-stage { display: grid; justify-items: center; gap: 8px; padding: 6px 0 10px; text-align: center; }
+.pack-stage__title { max-width: 20ch; margin: 0; font-size: 1.55rem; font-weight: 900; line-height: 1.1; text-wrap: balance; }
+.pack-stage__sub { max-width: 36ch; margin: 0; font-weight: 800; text-wrap: pretty; }
+.pack-stage__admin { max-width: 520px; margin: 14px 0 0; text-align: left; }
+.pack-stage__admin a { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.board-empty__retry { margin-top: 6px; }
+.pack-opener { display: grid; justify-items: center; gap: 2px; margin-top: 12px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pack-opener:disabled { cursor: progress; }
+.pack-opener:focus-visible { outline: none; }
+.pack-opener:focus-visible .pack-opener__cta { outline: 3px solid #1d1d1f; outline-offset: 3px; }
+.pack-opener__cta { padding: 12px 22px; }
+.pack-opener:active .pack-opener__cta { transform: translate(4px, 4px); box-shadow: 0 0 0 #1d1d1f; }
+.pack-slot { display: block; width: clamp(229px, 65vw, 317px); }
+.pack { display: block; width: 100%; height: auto; overflow: visible; transform: rotate(-4deg); transform-origin: 50% 62%; }
+.pack-opener .pack { animation: packSway 3.4s ease-in-out infinite; }
+.pack__ink { stroke: #1d1d1f; stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pack__shadow { fill: #1d1d1f; }
+.pack__crimp { fill: none; stroke: #1d1d1f; stroke-opacity: .28; stroke-width: 20; stroke-dasharray: 2 6; }
+.pack__scribble { fill: none; stroke: #1d1d1f; stroke-opacity: .4; stroke-width: 4; stroke-linecap: round; }
+.pack__text { fill: #1d1d1f; font-family: inherit; font-weight: 900; text-anchor: middle; }
+.pack__front { transition: transform 140ms cubic-bezier(.2,.9,.2,1); }
+.pack-opener:active .pack__front { transform: translate(6px, 6px); transition-duration: 60ms; }
+.pack__sheen { animation: packSheen 3.4s cubic-bezier(.4,0,.2,1) infinite; }
+@media (hover: hover) {
+  .pack-opener:hover .pack-opener__cta { transform: translate(1px, 1px); box-shadow: 3px 3px 0 #1d1d1f; }
+  .pack-opener:hover:not(:active) .pack__front { transform: translate(-3px, -3px); }
+}
+
+/* The opening plays on a clone lifted out of the page, so it outlives the Livewire swap to the board. */
+html[data-pack-opening] .pack-opener .pack { visibility: hidden; }
+.pack-fx { position: fixed; inset: 0; z-index: 35; overflow: hidden; pointer-events: none; }
+.pack-boom { position: absolute; z-index: 1; overflow: visible; }
+.pack-boom polygon { stroke: #1d1d1f; stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pack-ghost { position: absolute; z-index: 2; }
+.pack-shard { position: absolute; z-index: 3; border: 2px solid #1d1d1f; border-radius: 8px; box-shadow: 3px 3px 0 #1d1d1f; }
+/* Charging: the pack swells and shivers for as long as the board takes to arrive. */
+.pack-ghost .pack { animation: packCharge 420ms cubic-bezier(.4,0,.8,.6) both, packShiver 110ms linear 420ms infinite; }
+.pack-ghost .pack__sheen { animation: none; }
+.pack-ghost .pack__flap { transform-box: fill-box; transform-origin: 0% 100%; animation: packFlapStrain 420ms ease-in both; }
+/* Bursting: delayed by --burst-wait, so the pack pops on the same frame the stickers fly. */
+.pack-ghost.is-bursting { animation: packKick 360ms cubic-bezier(.5,0,.9,.5) calc(var(--burst-wait) + 280ms) forwards; }
+.pack-ghost.is-bursting .pack { animation: packCharge 420ms cubic-bezier(.4,0,.8,.6) both, packShiver 110ms linear 420ms infinite, packBlast 460ms cubic-bezier(.2,.9,.2,1) var(--burst-wait) forwards; }
+.pack-ghost.is-bursting .pack__flap { animation: packFlapStrain 420ms ease-in both, packFlapBlow 420ms cubic-bezier(.1,.8,.2,1) var(--burst-wait) forwards; }
+.pack-ghost.is-bursting .pack__shadow--flap { animation: packVanish 1ms var(--burst-wait) forwards; }
+.pack-ghost.is-bursting .pack__peek { animation: packPeek 300ms cubic-bezier(.2,.9,.2,1) calc(var(--burst-wait) + 40ms + var(--peek) * 30ms) both; }
+.pack-ghost.is-leaving { animation: packKick 360ms cubic-bezier(.5,0,.9,.5) both; }
+@keyframes packSway { 0%, 100% { transform: rotate(-5.5deg) translateY(0); } 50% { transform: rotate(-2.5deg) translateY(-5px); } }
+@keyframes packSheen { 0%, 55% { transform: translateX(0); } 100% { transform: translateX(420px); } }
+@keyframes packCharge { 0% { transform: rotate(-4deg) scale(1); } 20% { transform: rotate(-6deg) scale(1.02); } 40% { transform: rotate(-2.5deg) scale(1.04); } 60% { transform: rotate(-6deg) scale(1.06); } 80% { transform: rotate(-2deg) scale(1.08); } 100% { transform: rotate(-4deg) scale(1.1); } }
+@keyframes packShiver { 0%, 100% { transform: rotate(-4deg) scale(1.1); } 25% { transform: rotate(-6deg) scale(1.1); } 75% { transform: rotate(-2deg) scale(1.1); } }
+@keyframes packFlapStrain { 0% { transform: translate(0, 0) rotate(0); } 100% { transform: translate(0, 0) rotate(-5deg); } }
+@keyframes packBlast { 0% { transform: rotate(-4deg) scale(1.1); } 16% { transform: rotate(-4deg) scale(1.24, .76) translateY(16px); } 52% { transform: rotate(-2deg) scale(.95, 1.06); } 100% { transform: rotate(-4deg) scale(1); } }
+@keyframes packFlapBlow { 0% { transform: translate(0, 0) rotate(-5deg); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-80px, -320px) rotate(-210deg); opacity: 0; } }
+@keyframes packVanish { to { visibility: hidden; } }
+@keyframes packPeek { 0% { transform: translateY(0); } 62% { transform: translateY(-52px); } 100% { transform: translateY(-44px); } }
+@keyframes packKick { 0% { transform: none; opacity: 1; } 100% { transform: translate(-34px, 170px) rotate(-26deg) scale(.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .pack-opener .pack, .pack__sheen { animation: none; }
+  .pack__front { transition: none; }
+  .pack-opener:hover .pack__front, .pack-opener:active .pack__front { transform: none; }
+}
+
+/* ============ Patch notes: the one-off "what changed" popup ============ */
+.patch-notes { animation: patchNotesFade 180ms ease-out both; }
+/* Title and button stay put; only the list scrolls when a small phone runs out of room. */
+.patch-notes__sheet { display: flex; flex-direction: column; width: min(520px, 100%); max-height: calc(100dvh - 48px); padding: 0; overflow: hidden; animation: patchNotesIn 300ms cubic-bezier(.2,.9,.2,1) both; }
+.patch-notes__head { padding: 16px 58px 14px 18px; border-bottom: 2px solid #1d1d1f; background: #ffd166; }
+.patch-notes__title { margin: 0; font-size: 1.55rem; font-weight: 900; line-height: 1.1; text-wrap: balance; }
+.patch-notes__lead { margin: 6px 0 0; font-weight: 800; }
+.patch-notes__list { display: grid; gap: 16px; min-height: 0; margin: 0; padding: 18px; overflow-y: auto; overscroll-behavior: contain; list-style: none; }
+.patch-notes__item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; overflow-wrap: anywhere; }
+.patch-notes__item strong { display: block; font-weight: 900; }
+.patch-notes__item p { margin: 3px 0 0; font-weight: 700; line-height: 1.3; }
+.patch-notes__stamp { display: grid; place-items: center; width: 38px; height: 38px; border: 2px solid #1d1d1f; border-radius: 50%; background: #f8f2e9; line-height: 1; }
+.patch-notes__foot { padding: 14px 18px 18px; border-top: 2px solid #1d1d1f; }
+.patch-notes__ok { width: 100%; justify-content: center; padding: 12px 20px; }
+@keyframes patchNotesFade { from { opacity: 0; } }
+@keyframes patchNotesIn { from { opacity: 0; transform: translateY(18px) rotate(-1.5deg) scale(.96); } }
+@media (max-width: 720px) { .patch-notes { padding: 12px; } .patch-notes__sheet { max-height: calc(100dvh - 24px); } }
+@media (prefers-reduced-motion: reduce) { .patch-notes, .patch-notes__sheet { animation: none; } }

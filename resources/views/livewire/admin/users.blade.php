@@ -45,16 +45,26 @@
 
     <div class="record-list">
         @forelse ($users as $user)
-            <button class="record" type="button" wire:click="edit({{ $user->id }})" wire:key="user-{{ $user->id }}">
-                <span class="record-main">
+            @php $todaysBoard = $user->boards->first(); @endphp
+            <div class="record has-action" wire:key="user-{{ $user->id }}">
+                <button class="record-main record-hit" type="button" wire:click="edit({{ $user->id }})">
                     <strong>{{ $user->name }}</strong>
                     <span>{{ $user->email }}</span>
-                </span>
+                </button>
                 <span class="record-aside">
                     <span class="review-count">{{ $user->starting_score }} pt</span>
                     <span class="pill {{ $user->is_enabled ? 'on' : 'off' }}">{{ $user->is_enabled ? 'On' : 'Off' }}</span>
+                    @if ($todaysBoard)
+                        <button
+                            class="btn record-action"
+                            type="button"
+                            wire:click="regenerateBoard({{ $user->id }})"
+                            wire:confirm="Rigenerare la scheda di {{ $user->name }}? {{ $todaysBoard->submissions_count ? 'Ha già inviato dei bingo oggi: verranno cancellati insieme ai punti.' : 'Perde le caselle segnate oggi.' }} Riparte da una bustina nuova."
+                            wire:loading.attr="disabled"
+                        >Rigenera scheda</button>
+                    @endif
                 </span>
-            </button>
+            </div>
         @empty
             <div class="empty">
                 <span class="empty-emoji" aria-hidden="true">👥</span>

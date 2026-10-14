@@ -2,38 +2,49 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\Board;
+use App\Models\BoardSubmission;
+use App\Support\Scoring;
 use Livewire\Component;
 
 class Reviews extends Component
 {
     public string $note = '';
-    public ?int $previewBoardId = null;
+    public ?int $previewSubmissionId = null;
 
     public function mount(): void
     {
         $this->authorizeAdmin();
     }
 
-    public function approve(int $boardId): void
+    public function approve(int $submissionId): void
     {
         $this->authorizeAdmin();
-        $board = Board::with('cells')->findOrFail($boardId);
-        abort_unless($board->status === Board::PENDING && $board->hasBingo(), 409);
-        Board::whereKey($boardId)->where('status', Board::PENDING)->update([
-            'status' => Board::APPROVED,
+        $submission = BoardSubmission::with(['board.cells', 'board.submissions'])->findOrFail($submissionId);
+        abort_unless($submission->status === BoardSubmission::PENDING, 409);
+        abort_if($submission->lineCount() === 0, 409);
+        // The player can unmark squares after sending in: only pay for lines still standing.
+        abort_unless(array_diff($submission->lines, $submission->board->completedLines()) === [], 409);
+
+        $award = $submission->award();
+        $updated = BoardSubmission::whereKey($submissionId)->where('status', BoardSubmission::PENDING)->update([
+            'status' => BoardSubmission::APPROVED,
             'reviewed_at' => now(),
             'review_note' => null,
+            'points' => $award['points'],
+            'base_points' => $award['base'],
+            'multiplier' => $award['multiplier'],
         ]);
-        $this->dispatch('admin-saved', message: 'Bingo approvato');
+        abort_unless($updated === 1, 409);
+
+        $this->dispatch('admin-saved', message: 'Bingo approvato · +'.Scoring::format($award['points']).' pt');
     }
 
-    public function reject(int $boardId): void
+    public function reject(int $submissionId): void
     {
         $this->authorizeAdmin();
         $this->validate(['note' => ['nullable', 'string', 'max:1000']]);
-        $updated = Board::whereKey($boardId)->where('status', Board::PENDING)->update([
-            'status' => Board::REJECTED,
+        $updated = BoardSubmission::whereKey($submissionId)->where('status', BoardSubmission::PENDING)->update([
+            'status' => BoardSubmission::REJECTED,
             'reviewed_at' => now(),
             'review_note' => $this->note ?: null,
         ]);
@@ -42,22 +53,29 @@ class Reviews extends Component
         $this->dispatch('admin-saved', message: 'Bingo rifiutato');
     }
 
-    public function preview(int $boardId): void
+    public function preview(int $submissionId): void
     {
         $this->authorizeAdmin();
-        $this->previewBoardId = $boardId;
+        $this->previewSubmissionId = $submissionId;
     }
 
     public function closePreview(): void
     {
-        $this->previewBoardId = null;
+        $this->previewSubmissionId = null;
     }
 
     public function render()
     {
+        $submissions = BoardSubmission::with(['board.user', 'board.cells', 'board.submissions'])
+            ->where('status', BoardSubmission::PENDING)
+            ->oldest('submitted_at')
+            ->get();
+
         return view('livewire.admin.reviews', [
-            'boards' => Board::with(['user', 'cells'])->where('status', Board::PENDING)->oldest('submitted_at')->get(),
-            'previewBoard' => $this->previewBoardId ? Board::with(['user', 'cells'])->find($this->previewBoardId) : null,
+            'submissions' => $submissions,
+            'previewSubmission' => $this->previewSubmissionId
+                ? BoardSubmission::with(['board.user', 'board.cells', 'board.submissions'])->find($this->previewSubmissionId)
+                : null,
         ]);
     }
 

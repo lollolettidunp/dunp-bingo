@@ -2,7 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Models\Board;
+use App\Models\BoardSubmission;
 use Livewire\Component;
 
 class AdminBadge extends Component
@@ -10,7 +10,7 @@ class AdminBadge extends Component
     public function render()
     {
         return view('livewire.admin-badge', [
-            'pending' => Board::where('status', Board::PENDING)->count(),
+            'pending' => BoardSubmission::where('status', BoardSubmission::PENDING)->count(),
         ]);
     }
 }

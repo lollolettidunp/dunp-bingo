@@ -14,9 +14,8 @@ class ReplaceInvalidBoardCells
     public function __invoke(Cell $changed, CarbonImmutable $date): void
     {
         DB::transaction(function () use ($changed, $date) {
-            Board::with(['user', 'cells'])
+            Board::with(['user', 'cells', 'submissions'])
                 ->whereDate('played_on', $date)
-                ->whereIn('status', [Board::PLAYING, Board::REJECTED])
                 ->whereHas('cells', fn ($query) => $query->where('cell_id', $changed->id)->orWhere('covered_cell_id', $changed->id))
                 ->get()
                 ->each(fn (Board $board) => $this->replaceForBoard($board, $changed, $date));
@@ -29,8 +28,12 @@ class ReplaceInvalidBoardCells
             return;
         }
 
+        // Squares locked inside a bingo already sent in stay put: swapping one would
+        // void a claim the player is waiting on, or one the admin already paid out.
+        $frozen = $board->claimedPositions();
+
         // Hidden under a sticker: swap the snapshot silently so moving the sticker never restores it.
-        foreach ($board->cells->where('covered_cell_id', $changed->id) as $boardCell) {
+        foreach ($board->cells->where('covered_cell_id', $changed->id)->whereNotIn('position', $frozen) as $boardCell) {
             $replacement = $this->replacement($board, $date);
             $boardCell->update($replacement ? [
                 'covered_cell_id' => $replacement->id,
@@ -41,7 +44,7 @@ class ReplaceInvalidBoardCells
             $board->load('cells');
         }
 
-        foreach ($board->cells->where('cell_id', $changed->id) as $boardCell) {
+        foreach ($board->cells->where('cell_id', $changed->id)->whereNotIn('position', $frozen) as $boardCell) {
             $replacement = $this->replacement($board, $date);
             if (! $replacement) {
                 $board->update(['notice' => "La casella '{$boardCell->text}' non e' piu' valida per oggi, ma non ci sono celle sostitutive disponibili."]);

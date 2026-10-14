@@ -14,7 +14,6 @@ class BoardFactory extends Factory
         return [
             'user_id' => User::factory(),
             'played_on' => today(config('app.timezone')),
-            'status' => Board::PLAYING,
         ];
     }
 }

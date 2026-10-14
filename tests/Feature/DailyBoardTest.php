@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\DailyBoard;
 use App\Models\Board;
 use App\Models\BoardCell;
+use App\Models\BoardSubmission;
 use App\Models\Cell;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,34 +17,159 @@ class DailyBoardTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_the_board_stays_sealed_until_the_player_opens_the_pack(): void
+    {
+        $user = User::factory()->create();
+        Cell::factory()->count(30)->create();
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)
+            ->assertSee('Apri la bustina')
+            ->assertDontSee('wire:click="toggle(0)', false);
+        $this->assertSame(0, Board::count(), 'visiting the page must not deal the board');
+
+        $test->call('openPack')
+            ->assertDispatched('board-unpacked')
+            ->assertDontSee('Apri la bustina')
+            ->assertSee('wire:click="toggle(0)', false);
+        $this->assertSame(1, Board::count());
+    }
+
+    public function test_changes_made_before_opening_the_pack_shape_the_board(): void
+    {
+        $user = User::factory()->create();
+        $cells = Cell::factory()->count(24)->create();
+        $backToday = Cell::factory()->create(['is_active' => false]);
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+
+        // The admin fixes the day while the pack is still sealed: one cell goes out, one comes back.
+        $cells->first()->update(['is_active' => false]);
+        $backToday->update(['is_active' => true]);
+        $test->call('openPack');
+
+        $dealt = Board::first()->cells()->pluck('cell_id');
+        $this->assertContains($backToday->id, $dealt);
+        $this->assertNotContains($cells->first()->id, $dealt);
+    }
+
+    public function test_an_already_opened_board_skips_the_pack(): void
+    {
+        $user = User::factory()->create();
+        Board::factory()->for($user)->create();
+
+        Livewire::actingAs($user)->test(DailyBoard::class)
+            ->assertDontSee('Apri la bustina')
+            ->assertSee('In gioco');
+    }
+
+    public function test_a_pack_opened_on_another_device_shows_up_on_the_next_poll(): void
+    {
+        $user = User::factory()->create();
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->assertSee('Apri la bustina');
+
+        Board::factory()->for($user)->create();
+
+        $test->refresh()
+            ->assertDontSee('Apri la bustina')
+            ->assertNotDispatched('board-unpacked');
+    }
+
+    public function test_a_failed_opening_can_be_retried(): void
+    {
+        $user = User::factory()->create();
+        Cell::factory()->count(23)->create();
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack')
+            ->assertDispatched('board-pack-failed')
+            ->assertSee('Servono almeno 24 celle')
+            ->assertSee('Riprova');
+
+        Cell::factory()->create();
+        $test->call('openPack')
+            ->assertDontSee('Servono almeno 24 celle')
+            ->assertSee('In gioco');
+    }
+
+    public function test_only_the_admin_can_be_reminded_to_fix_the_day_before_opening(): void
+    {
+        config(['services.google.admin_email' => 'admin@azienda.it']);
+
+        // The flag drives the admin note on the sealed pack; nobody else may ever get it.
+        Livewire::actingAs(User::factory()->create(['email' => 'admin@azienda.it']))->test(DailyBoard::class)
+            ->assertViewHas('isAdmin', true);
+
+        Livewire::actingAs(User::factory()->create())->test(DailyBoard::class)
+            ->assertSee('Apri la bustina')
+            ->assertViewHas('isAdmin', false)
+            ->assertDontSee('Vai al pannello admin');
+    }
+
     public function test_owner_can_toggle_and_submit_a_valid_bingo(): void
     {
         $user = User::factory()->create();
         Cell::factory()->count(30)->create();
 
-        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
         foreach ([0, 1, 2, 3, 4] as $position) {
             $test->call('toggle', $position);
         }
         $test->call('submit');
 
-        $board = Board::first();
-        $this->assertSame(Board::PENDING, $board->status);
-        $this->assertNotNull($board->submitted_at);
+        $submission = Board::first()->submissions()->first();
+        $this->assertSame(BoardSubmission::PENDING, $submission->status);
+        $this->assertSame([0], $submission->lines, 'the top row is line 0');
+        $this->assertNotNull($submission->submitted_at);
     }
 
-    public function test_owner_can_keep_toggling_while_board_is_pending(): void
+    public function test_owner_can_send_in_an_extra_bingo_after_the_first_one(): void
     {
         $user = User::factory()->create();
         Cell::factory()->count(30)->create();
 
-        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
         foreach ([0, 1, 2, 3, 4] as $position) {
             $test->call('toggle', $position);
         }
         $test->call('submit');
 
-        $this->assertSame(Board::PENDING, Board::first()->status);
+        // Second row: a brand new line, sent in on its own.
+        foreach ([5, 6, 7, 8, 9] as $position) {
+            $test->call('toggle', $position);
+        }
+        $test->call('submit')->assertSee('2 bingo inviati');
+
+        $submissions = Board::first()->submissions;
+        $this->assertCount(2, $submissions);
+        $this->assertSame([1], $submissions->last()->lines);
+    }
+
+    public function test_a_line_already_sent_in_cannot_be_claimed_twice(): void
+    {
+        $user = User::factory()->create();
+        Cell::factory()->count(30)->create();
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
+        foreach ([0, 1, 2, 3, 4] as $position) {
+            $test->call('toggle', $position);
+        }
+        $test->call('submit');
+        $test->call('submit')->assertStatus(422);
+
+        $this->assertCount(1, Board::first()->submissions);
+    }
+
+    public function test_owner_can_keep_toggling_while_a_bingo_is_pending(): void
+    {
+        $user = User::factory()->create();
+        Cell::factory()->count(30)->create();
+
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
+        foreach ([0, 1, 2, 3, 4] as $position) {
+            $test->call('toggle', $position);
+        }
+        $test->call('submit');
+
+        $this->assertSame(BoardSubmission::PENDING, Board::first()->state());
 
         $test->call('toggle', 5)->assertStatus(200);
         $this->assertNotNull(Board::first()->cells()->where('position', 5)->first()->marked_at);
@@ -54,14 +180,14 @@ class DailyBoardTest extends TestCase
         $user = User::factory()->create();
         Cell::factory()->count(30)->create();
 
-        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
         foreach ([0, 1, 2, 3, 4] as $position) {
             $test->call('toggle', $position);
         }
         $test->call('submit');
 
         $board = Board::first();
-        $board->update(['status' => Board::APPROVED, 'reviewed_at' => now()]);
+        $board->submissions()->first()->update(['status' => BoardSubmission::APPROVED, 'reviewed_at' => now(), 'points' => 2]);
 
         $test->call('toggle', 5)->assertStatus(200);
         $this->assertNotNull($board->cells()->where('position', 5)->first()->marked_at);
@@ -69,16 +195,23 @@ class DailyBoardTest extends TestCase
 
     public function test_board_statuses_have_user_facing_labels(): void
     {
-        $this->assertSame('In gioco', (new Board(['status' => Board::PLAYING]))->statusLabel());
-        $this->assertSame('In Revisione', (new Board(['status' => Board::PENDING]))->statusLabel());
-        $this->assertSame('Completata!', (new Board(['status' => Board::APPROVED]))->statusLabel());
+        $playing = Board::factory()->create();
+        $this->assertSame('In gioco', $playing->statusLabel());
+
+        $pending = Board::factory()->create();
+        BoardSubmission::factory()->for($pending, 'board')->create();
+        $this->assertSame('In Revisione', $pending->load('submissions')->statusLabel());
+
+        $approved = Board::factory()->create();
+        BoardSubmission::factory()->for($approved, 'board')->approved()->create();
+        $this->assertSame('Completata!', $approved->load('submissions')->statusLabel());
     }
     public function test_board_shows_status_labels_and_uses_single_click_toggle(): void
     {
         $user = User::factory()->create();
         Cell::factory()->count(30)->create();
 
-        Livewire::actingAs($user)->test(DailyBoard::class)
+        Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack')
             ->assertSee('In gioco')
             ->assertSee('Istruzioni')
             ->assertSee('Tocca una casella quando succede davvero.')
@@ -90,11 +223,11 @@ class DailyBoardTest extends TestCase
         $user = User::factory()->create();
         Cell::factory()->count(24)->create();
 
-        Livewire::actingAs($user)->test(DailyBoard::class)->call('toggle', 12)->assertStatus(422);
+        Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack')->call('toggle', 12)->assertStatus(422);
 
         Cell::first()->update(['is_active' => false]);
         $other = User::factory()->create();
-        Livewire::actingAs($other)->test(DailyBoard::class)->assertSee('Servono almeno 24 celle');
+        Livewire::actingAs($other)->test(DailyBoard::class)->call('openPack')->assertSee('Servono almeno 24 celle');
     }
     public function test_user_applies_one_daily_sticker_to_replace_a_board_cell(): void
     {
@@ -107,7 +240,7 @@ class DailyBoardTest extends TestCase
             'special_date' => '2026-06-23',
         ]);
 
-        $test = Livewire::actingAs($user)->test(DailyBoard::class)
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack')
             ->assertSee('Sticker one-time');
 
         $board = Board::first();
@@ -134,7 +267,7 @@ class DailyBoardTest extends TestCase
         Cell::factory()->count(24)->create();
         $sticker = Cell::factory()->create(['text' => 'Sticker one-time', 'special_date' => '2026-06-23']);
 
-        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
         $board = Board::first();
         $misclicked = $board->cells()->where('position', 0)->first();
         $misclicked->update(['marked_at' => now()]);
@@ -173,7 +306,7 @@ class DailyBoardTest extends TestCase
         $first = Cell::factory()->create(['text' => 'Primo adesivo', 'special_date' => '2026-06-23']);
         $second = Cell::factory()->create(['text' => 'Secondo adesivo', 'special_date' => '2026-06-23']);
 
-        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
         $board = Board::first();
         $covered = $board->cells()->whereIn('position', [0, 1])->pluck('text', 'position');
 
@@ -196,7 +329,7 @@ class DailyBoardTest extends TestCase
         $first = Cell::factory()->create(['text' => 'Primo adesivo', 'special_date' => '2026-06-23']);
         $second = Cell::factory()->create(['text' => 'Secondo adesivo', 'special_date' => '2026-06-23']);
 
-        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
         $original = Board::first()->cells()->where('position', 0)->value('text');
 
         $test->call('applySpecialCell', $first->id, 0)
@@ -213,7 +346,7 @@ class DailyBoardTest extends TestCase
         $user = User::factory()->create();
         Cell::factory()->count(30)->create();
 
-        $test = Livewire::actingAs($user)->test(DailyBoard::class);
+        $test = Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack');
         $ordinary = Board::first()->cells()->where('position', 0)->value('cell_id');
 
         $test->call('applySpecialCell', $ordinary, 1)->assertStatus(409);
@@ -265,7 +398,7 @@ class DailyBoardTest extends TestCase
         Cell::factory()->count(24)->create();
         Cell::factory()->create(['text' => 'Sticker one-time', 'special_date' => '2026-06-23']);
 
-        Livewire::actingAs($user)->test(DailyBoard::class)
+        Livewire::actingAs($user)->test(DailyBoard::class)->call('openPack')
             ->assertSee('Come funzionano gli adesivi')
             ->assertSee('special-help__button', false)
             ->assertSee('specialHelpOpen', false)

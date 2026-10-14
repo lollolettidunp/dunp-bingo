@@ -1,7 +1,7 @@
 @php
-    $statusClass = fn (\App\Models\Board $b) => match ($b->status) {
-        \App\Models\Board::PENDING => 's-pending',
-        \App\Models\Board::APPROVED => 's-approved',
+    $statusClass = fn (\App\Models\Board $b) => match ($b->state()) {
+        \App\Models\BoardSubmission::PENDING => 's-pending',
+        \App\Models\BoardSubmission::APPROVED => 's-approved',
         default => 's-playing',
     };
 @endphp

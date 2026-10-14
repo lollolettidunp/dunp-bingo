@@ -33,6 +33,7 @@
         {{ $slot }}
     </main>
 
+    <livewire:patch-notes />
     <div id="bingoBanner" class="bingo-banner">BINGO!</div>
     @livewireScripts
 </body>

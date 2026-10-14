@@ -1,6 +1,7 @@
 import { installOptimisticBoard } from './optimistic-board.js';
 import { installMissedNotifications } from './missed-notifications.js';
 import { installSpecialStickers } from './special-stickers.js';
+import { installPackOpening } from './pack-opening.js';
 
 const FACE_FILES = [
   'alessandro-moscetta.jpg','angelo-surano.jpg','chiara-zamponi.jpg','claudio-polito.jpg',
@@ -12,6 +13,7 @@ const FACE_FILES = [
 installOptimisticBoard({ showFace: showRandomFaceBubble, showBingo });
 installMissedNotifications();
 installSpecialStickers();
+installPackOpening();
 
 document.addEventListener('bingo-completed', () => {
   if (Date.now() - (window.__optimisticBingoAt || 0) < 1500) return;

@@ -4,41 +4,104 @@
             <span class="board-empty__emoji" aria-hidden="true">🎲</span>
             <p class="board-empty__title">Nessuna scheda per oggi</p>
             <p class="board-empty__msg">{{ $generationError }}</p>
+            <button type="button" class="btn is-sky board-empty__retry" wire:click="openPack" wire:loading.attr="disabled">Riprova</button>
+        </div>
+    @elseif (! $board)
+        <div class="pack-stage">
+            {{-- @if ($regenerated)
+                <h2 class="pack-stage__title">C'è una bustina nuova per te</h2>
+                <p class="pack-stage__sub">L'admin ha rigenerato la tua scheda di oggi. Scartala per ripartire da capo.</p>
+            @else
+                <h2 class="pack-stage__title">La scheda di oggi è ancora nella bustina</h2>
+                <p class="pack-stage__sub">Dentro ci sono 24 caselle più il bonus. Scartala quando sei pronto a giocare.</p>
+            @endif --}}
+
+            <button type="button" class="pack-opener" data-pack-opener wire:click="openPack" wire:loading.attr="disabled">
+                <span class="pack-slot"><x-sticker-pack /></span>
+                <span class="btn is-lime pack-opener__cta">
+                    <span wire:loading.remove wire:target="openPack">Apri la bustina</span>
+                    <span wire:loading wire:target="openPack">Sto scartando…</span>
+                </span>
+            </button>
+
+            {{-- @if ($isAdmin)
+                <div class="board-note pack-stage__admin" role="note">
+                    <div class="board-note__body">
+                        <strong>Per l'admin</strong>
+                        <p>Qualcuno è rientrato o c'è una cella da sistemare? Fallo adesso: la tua scheda viene generata solo quando apri la bustina. <a href="{{ route('admin') }}">Vai al pannello admin</a></p>
+                    </div>
+                </div>
+            @endif --}}
         </div>
     @else
         @php
-            $status = $board->status;
+            $status = $board->state();
             $marked = $board->markedCount();
-            $hasBingo = $board->hasBingo();
             $remaining = $board->squaresFromBingo();
             $winning = $board->winningPositions();
             $locked = false;
-            $canSubmit = $hasBingo && in_array($status, [\App\Models\Board::PLAYING, \App\Models\Board::REJECTED], true);
+
+            $submittable = count($board->submittableLines());
+            $canSubmit = $submittable > 0;
+            $approvedLines = $board->approvedLineCount();
+            $pendingLines = $board->pendingLineCount();
+            $claimedLines = $approvedLines + $pendingLines;
+            $points = $board->points();
+            // Nothing claimed yet: this submit is the one the speed multiplier rides on.
+            $firstBingo = $claimedLines === 0;
+            $multiplier = \App\Support\Scoring::multiplierFor(now());
+            $extraValue = \App\Support\Scoring::format($submittable * \App\Support\Scoring::EXTRA_BINGO);
         @endphp
 
-        <div class="board-status is-{{ $status }}">
+        <div class="board-status is-{{ $canSubmit ? 'ready' : $status }}">
             <div class="board-status__text">
                 <strong class="board-status__title">
-                    @switch($status)
-                        @case(\App\Models\Board::PENDING) In revisione @break
-                        @case(\App\Models\Board::APPROVED) Completata! 🏆 @break
-                        @case(\App\Models\Board::REJECTED) Quasi! Ritocca e reinvia 💪 @break
-                        @default {{ $hasBingo ? 'Hai fatto BINGO! 🎉' : 'In gioco' }}
-                    @endswitch
+                    @if ($canSubmit)
+                        {{ $firstBingo ? 'Hai fatto BINGO! 🎉' : 'Bingo extra pronto! 🎯' }}
+                    @elseif ($status === \App\Models\BoardSubmission::PENDING)
+                        In revisione
+                    @elseif ($status === \App\Models\BoardSubmission::APPROVED)
+                        Completata! 🏆
+                    @elseif ($status === \App\Models\BoardSubmission::REJECTED)
+                        Quasi! Ritocca e reinvia 💪
+                    @else
+                        In gioco
+                    @endif
                 </strong>
                 <span class="board-status__sub">
-                    @switch($status)
-                        @case(\App\Models\Board::PENDING) La tua scheda è in attesa di approvazione dall'admin. @break
-                        @case(\App\Models\Board::APPROVED) Complimenti, il bingo è stato approvato. @break
-                        @case(\App\Models\Board::REJECTED) Sei di nuovo in gioco: sistema quello che serve e reinvia quando vuoi. @break
-                        @default {{ $hasBingo ? 'Invia la scheda in revisione per vincere.' : 'Segna le caselle man mano che succedono.' }}
-                    @endswitch
+                    @if ($canSubmit && $firstBingo)
+                        Invia la scheda in revisione per vincere.
+                    @elseif ($canSubmit)
+                        {{ $submittable === 1 ? 'Hai una nuova linea' : "Hai {$submittable} nuove linee" }} da inviare: +{{ $extraValue }} punti.
+                    @elseif ($status === \App\Models\BoardSubmission::PENDING)
+                        La tua scheda è in attesa di approvazione dall'admin. Intanto continua: ogni linea in più vale 0,5.
+                    @elseif ($status === \App\Models\BoardSubmission::APPROVED)
+                        Bingo approvato. Continua a segnare: ogni linea in più vale 0,5 punti.
+                    @elseif ($status === \App\Models\BoardSubmission::REJECTED)
+                        Sei di nuovo in gioco: sistema quello che serve e reinvia quando vuoi.
+                    @else
+                        Segna le caselle man mano che succedono.
+                    @endif
+                </span>
+
+                <span class="board-status__chips">
+                    @if ($points > 0)
+                        <span class="statetag s-approved">🏆 {{ \App\Support\Scoring::format($points) }} pt oggi</span>
+                    @endif
+                    @if ($approvedLines + $pendingLines > 0)
+                        <span class="statetag s-playing">{{ $claimedLines }} {{ $claimedLines === 1 ? 'bingo inviato' : 'bingo inviati' }}</span>
+                    @endif
+                    @if ($firstBingo && $multiplier > 1)
+                        <span class="statetag s-bonus">⚡ ×{{ \App\Support\Scoring::format($multiplier) }} se invii entro le {{ $multiplier >= 2 ? '11:00' : '15:00' }}</span>
+                    @endif
                 </span>
             </div>
 
             @if ($canSubmit)
                 <button class="btn board-cta" wire:click="submit" wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="submit">🚀 Invia in revisione</span>
+                    <span wire:loading.remove wire:target="submit">
+                        🚀 {{ $firstBingo ? 'Invia in revisione' : 'Invia bingo extra' }}{{ $submittable > 1 ? " (×{$submittable})" : '' }}
+                    </span>
                     <span wire:loading wire:target="submit">Invio…</span>
                 </button>
             @endif
@@ -52,15 +115,17 @@
                     <li>Tocca una casella quando succede davvero.</li>
                     <li>Il centro è bonus: vale già segnato.</li>
                     <li>Quando compare BINGO, invia la scheda in revisione.</li>
+                    <li>Il primo bingo vale 1 punto: <strong>×2</strong> se lo invii entro le 11:00, <strong>×1,5</strong> entro le 15:00.</li>
+                    <li>Dopo il primo, continua a giocare: ogni linea in più vale <strong>0,5</strong> punti e si invia a parte.</li>
                 </ul>
             </div>
         </details>
 
-        @if ($status === \App\Models\Board::REJECTED && $board->review_note)
+        @if ($board->lastRejection()?->review_note)
             <div class="board-note" x-data="{ open: true }" x-show="open" x-collapse role="status">
                 <div class="board-note__body">
                     <strong>Nota dell'admin</strong>
-                    <p>{{ $board->review_note }}</p>
+                    <p>{{ $board->lastRejection()->review_note }}</p>
                 </div>
                 <button class="board-note__close" type="button" x-on:click="open = false" aria-label="Nascondi nota">×</button>
             </div>
@@ -81,7 +146,7 @@
                     <div class="board-progress__fill" style="transform: scaleX({{ number_format($marked / \App\Models\Board::MARKABLE, 3, '.', '') }})"></div>
                 </div>
                 <span class="board-progress__count">{{ $marked }}<small>/{{ \App\Models\Board::MARKABLE }}</small></span>
-                @if (! $hasBingo && $remaining <= 2)
+                @if (! $canSubmit && $remaining <= 2)
                     <span class="board-nudge">🔥 {{ $remaining === 1 ? 'Ti manca 1 casella' : "Ti mancano {$remaining} caselle" }} al BINGO!</span>
                 @endif
             </div>

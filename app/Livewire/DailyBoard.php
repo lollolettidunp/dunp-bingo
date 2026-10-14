@@ -3,37 +3,68 @@
 namespace App\Livewire;
 
 use App\Actions\CreateDailyBoard;
+use App\Actions\RegenerateDailyBoard;
 use App\Models\Board;
 use App\Models\BoardCell;
+use App\Models\BoardSubmission;
 use App\Models\Cell;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class DailyBoard extends Component
 {
-    public ?Board $board = null;
     public ?string $generationError = null;
 
-    public function mount(CreateDailyBoard $create): void
+    /**
+     * Today's board, null while the pack is still sealed. Looked up on every
+     * request rather than kept in the component state: the admin can regenerate
+     * it under an open page (or it gets opened on another device).
+     */
+    #[Computed]
+    public function board(): ?Board
     {
+        return Board::query()
+            ->where('user_id', auth()->id())
+            ->whereDate('played_on', CarbonImmutable::today(config('app.timezone')))
+            ->first();
+    }
+
+    /**
+     * The day's board is only dealt when the player tears the pack open: until
+     * then the admin can still fix attendance or cells and have them count.
+     */
+    public function openPack(CreateDailyBoard $create): void
+    {
+        $this->generationError = null;
+
         try {
-            $this->board = $create(auth()->user(), CarbonImmutable::today(config('app.timezone')));
+            $create(auth()->user(), CarbonImmutable::today(config('app.timezone')));
+            unset($this->board);
+            Cache::forget(RegenerateDailyBoard::noticeKey(auth()->id()));
+            $this->dispatch('board-unpacked');
         } catch (DomainException $exception) {
             report($exception);
             $this->generationError = $exception->getMessage();
+            $this->dispatch('board-pack-failed');
         }
     }
 
     public function toggle(int $position): void
     {
-        abort_unless($this->board?->user_id === auth()->id(), 403);
+        // Regenerated under a page still showing the old board: the re-render brings the pack back.
+        if (! $this->board) {
+            return;
+        }
         abort_if($position === 12, 422);
 
         $this->board->load('cells');
-        $hadBingo = $this->board->hasBingo();
+        // Every new line is worth celebrating, not just the first one of the day.
+        $linesBefore = count($this->board->completedLines());
         $cell = $this->board->cells()->where('position', $position)->firstOrFail();
         $marked = ! $cell->marked_at;
         $cell->update(['marked_at' => $marked ? now() : null]);
@@ -42,7 +73,7 @@ class DailyBoard extends Component
         if ($marked) {
             $this->dispatch('cell-marked', position: $position);
         }
-        if (! $hadBingo && $this->board->hasBingo()) {
+        if (count($this->board->completedLines()) > $linesBefore) {
             $this->dispatch('bingo-completed');
         }
     }
@@ -53,7 +84,9 @@ class DailyBoard extends Component
      */
     public function applySpecialCell(int $cellId, int $position): void
     {
-        abort_unless($this->board?->user_id === auth()->id(), 403);
+        if (! $this->board) {
+            return;
+        }
         abort_if($position === Board::BONUS_POSITION, 422);
 
         $target = $this->board->cells()->where('position', $position)->firstOrFail();
@@ -117,28 +150,58 @@ class DailyBoard extends Component
         ];
     }
 
+    /**
+     * Sends in every completed line not claimed yet — the first bingo, or an
+     * extra one found later in the day. The lock keeps a double tap from
+     * claiming the same line twice.
+     */
     public function submit(): void
     {
-        abort_unless($this->board?->user_id === auth()->id(), 403);
-        abort_unless(in_array($this->board->status, [Board::PLAYING, Board::REJECTED], true), 409);
-        $this->board->refresh()->load('cells');
-        abort_unless($this->board->hasBingo(), 422);
-        $this->board->update(['status' => Board::PENDING, 'submitted_at' => now()]);
+        if (! $this->board) {
+            return;
+        }
+
+        $lines = DB::transaction(function () {
+            $board = Board::with(['cells', 'submissions'])->whereKey($this->board->id)->lockForUpdate()->firstOrFail();
+            $lines = $board->submittableLines();
+
+            if ($lines !== []) {
+                $board->submissions()->create([
+                    'lines' => $lines,
+                    'status' => BoardSubmission::PENDING,
+                    'submitted_at' => now(),
+                ]);
+            }
+
+            return $lines;
+        });
+
+        abort_if($lines === [], 422);
+        $this->board->refresh()->load(['cells', 'submissions']);
     }
 
     public function render()
     {
-        $this->board?->load('cells');
-        $specialAppliedCellIds = $this->specialAppliedCellIds();
+        $board = $this->board?->load(['cells', 'submissions']);
+        $specialAppliedCellIds = $board ? $this->specialAppliedCellIds() : [];
 
         return view('livewire.daily-board', [
+            'board' => $board,
+            'isAdmin' => strtolower((string) auth()->user()?->email) === strtolower((string) config('services.google.admin_email')),
+            'regenerated' => ! $board && $this->regeneratedToday(),
             'specialAppliedCellIds' => $specialAppliedCellIds,
-            'specialCells' => $this->specialCells(),
-            'placedSpecials' => $this->board?->cells
+            'specialCells' => $board ? $this->specialCells() : collect(),
+            'placedSpecials' => $board?->cells
                 ->filter(fn (BoardCell $cell) => $cell->isCovering() && in_array($cell->cell_id, $specialAppliedCellIds, true))
                 ->values() ?? collect(),
-            'missedCellIds' => $this->missedCellIds(),
+            'missedCellIds' => $board ? $this->missedCellIds() : [],
         ]);
+    }
+
+    /** The pack is sealed again because the admin threw today's board away. */
+    private function regeneratedToday(): bool
+    {
+        return Cache::get(RegenerateDailyBoard::noticeKey(auth()->id())) === CarbonImmutable::today(config('app.timezone'))->toDateString();
     }
 
     /**
@@ -148,10 +211,6 @@ class DailyBoard extends Component
      */
     private function missedCellIds(): array
     {
-        if (! $this->board) {
-            return [];
-        }
-
         return BoardCell::missedEntriesFor(auth()->id())
             ->pluck('cell_id')
             ->all();
@@ -159,10 +218,6 @@ class DailyBoard extends Component
 
     private function specialAppliedCellIds(): array
     {
-        if (! $this->board) {
-            return [];
-        }
-
         $used = $this->board->cells()->whereNotNull('cell_id')->pluck('cell_id')->all();
 
         return Cell::query()
@@ -173,10 +228,6 @@ class DailyBoard extends Component
     }
     private function specialCells(): Collection
     {
-        if (! $this->board) {
-            return collect();
-        }
-
         $used = $this->board->cells()->whereNotNull('cell_id')->pluck('cell_id')->all();
 
         return Cell::query()

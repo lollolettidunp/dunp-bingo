@@ -32,7 +32,7 @@ class CreateDailyBoard
             throw_if($eligible->count() < 24, DomainException::class, 'Servono almeno 24 celle eleggibili.');
 
             $cells = $this->bestCells($eligible);
-            $board = Board::create(['user_id' => $user->id, 'played_on' => $date->toDateString(), 'status' => Board::PLAYING]);
+            $board = Board::create(['user_id' => $user->id, 'played_on' => $date->toDateString()]);
             foreach ($cells as $position => $cell) {
                 $board->cells()->create($cell ? [
                     'cell_id' => $cell->id,
