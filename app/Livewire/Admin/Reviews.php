@@ -19,11 +19,10 @@ class Reviews extends Component
     public function approve(int $submissionId): void
     {
         $this->authorizeAdmin();
-        $submission = BoardSubmission::with(['board.cells', 'board.submissions'])->findOrFail($submissionId);
+        $submission = BoardSubmission::with('board.submissions')->findOrFail($submissionId);
         abort_unless($submission->status === BoardSubmission::PENDING, 409);
         abort_if($submission->lineCount() === 0, 409);
-        // The player can unmark squares after sending in: only pay for lines still standing.
-        abort_unless(array_diff($submission->lines, $submission->board->completedLines()) === [], 409);
+        // Squares may have changed since sending in: the reviewer judges the claim, not the live board.
 
         $award = $submission->award();
         $updated = BoardSubmission::whereKey($submissionId)->where('status', BoardSubmission::PENDING)->update([

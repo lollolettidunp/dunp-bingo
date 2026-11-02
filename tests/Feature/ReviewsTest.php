@@ -93,7 +93,7 @@ class ReviewsTest extends TestCase
         $this->assertSame(1.5, $board->fresh()->load('submissions')->points());
     }
 
-    public function test_a_submission_whose_line_was_unmarked_cannot_be_approved(): void
+    public function test_a_submission_whose_line_was_unmarked_can_still_be_approved(): void
     {
         $admin = $this->admin();
         $board = $this->boardWithTopRow();
@@ -103,7 +103,9 @@ class ReviewsTest extends TestCase
         Livewire::actingAs($admin)->test(Reviews::class)
             ->assertSee('Le caselle sono cambiate dopo l\'invio', false)
             ->call('approve', $submission->id)
-            ->assertStatus(409);
+            ->assertOk();
+
+        $this->assertSame(BoardSubmission::APPROVED, $submission->fresh()->status);
     }
 
     public function test_admin_can_preview_the_claimed_board_in_a_popup(): void

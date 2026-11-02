@@ -1,0 +1,13 @@
+{
+  "name": "Dunp-ingo",
+  "short_name": "Dunp-ingo",
+  "icons": [
+    { "src": "android-chrome-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "theme_color": "#ff4f87",
+  "background_color": "#f5f0e8",
+  "display": "standalone",
+  "start_url": "../",
+  "scope": "../"
+}

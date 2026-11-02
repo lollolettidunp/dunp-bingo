@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dunp-ingo</title>
+    <x-favicons />
     @unless (app()->environment('testing'))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endunless

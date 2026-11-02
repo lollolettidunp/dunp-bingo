@@ -33,11 +33,11 @@
                     @endif
                 </p>
                 @unless ($stillValid)
-                    <p class="review-warning">⚠️ Le caselle sono cambiate dopo l'invio: la linea non è più completa, puoi solo rifiutare.</p>
+                    <p class="review-warning">⚠️ Le caselle sono cambiate dopo l'invio: sulla scheda attuale la linea non è più completa.</p>
                 @endunless
 
                 <div class="review-actions">
-                    <button class="btn is-lime" type="button" wire:click="approve({{ $submission->id }})" @disabled(! $stillValid)>✓ Approva</button>
+                    <button class="btn is-lime" type="button" wire:click="approve({{ $submission->id }})">✓ Approva</button>
                     <button class="btn is-danger" type="button" x-on:click="rejecting = !rejecting" x-bind:aria-expanded="rejecting">✕ Rifiuta</button>
                     <button class="btn is-ghost" type="button" wire:click="preview({{ $submission->id }})">Vedi scheda</button>
                 </div>
